@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kapkoti Solution</title>
+<meta name="description" content="Kapkoti Solution builds governed AI software for small and medium businesses: low-risk by design, output-focused, and backed by hands-on support.">
+<meta name="theme-color" content="#101211">
+<link rel="canonical" href="https://kapkotisolution.com/">
+<meta property="og:title" content="Kapkoti Solution">
+<meta property="og:description" content="Governed AI software for small and medium businesses.">
+<meta property="og:url" content="https://kapkotisolution.com/">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23101211'/><text x='5' y='24' font-family='Arial' font-weight='900' font-size='22' fill='%23ef5a3c'>K</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;800;900&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#101211; --ink-2:#080a09; --paper:#efede7; --muted:#8d918c; --line:#2a2e2b; --accent:#ef5a3c;
+  --display:Montserrat,"Helvetica Neue",Arial,sans-serif;
+  --hand:Caveat,"Bradley Hand","Segoe Print",cursive;
+  --mono:"Courier New",Courier,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--ink);color:var(--paper);font:500 1.05rem/1.6 var(--display);overflow-x:hidden}
+a{color:inherit}
+::selection{background:var(--accent);color:var(--ink)}
+
+/* film grain over everything */
+.grain{position:fixed;inset:-50%;pointer-events:none;z-index:50;opacity:.07;
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation:grain 1s steps(6) infinite}
+@keyframes grain{0%{transform:translate(0,0)}33%{transform:translate(-3%,2%)}66%{transform:translate(2%,-3%)}100%{transform:translate(0,0)}}
+
+.label{font:700 .78rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.hand{font:500 1.6rem/1.2 var(--hand);color:var(--accent)}
+.wrap{width:min(1200px,100% - 32px);margin-inline:auto}
+
+/* hero */
+.stage{position:relative;min-height:100svh;display:flex;flex-direction:column;justify-content:space-between;padding:24px 0 32px;overflow:hidden}
+.masthead{display:flex;justify-content:space-between;align-items:flex-start}
+.wordmark{font:900 1.05rem/1 var(--display);text-transform:lowercase;text-decoration:none;letter-spacing:-.02em}
+.signal{display:flex;gap:5px;align-items:flex-end;height:18px}
+.signal i{width:4px;background:var(--accent);animation:bar 1.2s ease-in-out infinite}
+.signal i:nth-child(1){height:40%}.signal i:nth-child(2){height:100%;animation-delay:.2s}.signal i:nth-child(3){height:65%;animation-delay:.4s}
+@keyframes bar{50%{transform:scaleY(.4)}}
+.thread{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.thread path{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke;stroke-dasharray:1;stroke-dashoffset:1;animation:draw 3.2s .3s cubic-bezier(.6,0,.2,1) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+h1{position:relative;font:900 clamp(3.4rem,13vw,12.5rem)/.82 var(--display);letter-spacing:-.065em;text-transform:uppercase}
+h1 span{display:block}
+h1 .accent{color:var(--accent)}
+h1 .tag{position:absolute;right:0;top:.2em;font:700 clamp(.6rem,1vw,.8rem)/1 var(--mono);letter-spacing:.2em;color:var(--muted)}
+.hero-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.chip{display:inline-flex;gap:.6em;align-items:center;border:1px solid var(--paper);border-radius:999px;padding:.8em 1.3em;font:700 .8rem/1 var(--mono);letter-spacing:.12em;text-decoration:none;text-transform:uppercase;transition:background .2s,color .2s}
+.chip:hover{background:var(--paper);color:var(--ink)}
+.chip.solid{background:var(--accent);border-color:var(--accent);color:var(--ink)}
+.chip.solid:hover{background:var(--paper);border-color:var(--paper)}
+
+/* ticker */
+.ticker{border-block:1px solid var(--line);overflow:hidden;background:var(--ink-2)}
+.ticker-track{display:flex;width:max-content;animation:tick 30s linear infinite}
+.ticker span{font:900 clamp(1.4rem,3vw,2.4rem)/1 var(--display);letter-spacing:-.03em;padding:18px 0;white-space:nowrap;text-transform:uppercase}
+.ticker b{color:var(--accent);padding:0 .6em}
+@keyframes tick{to{transform:translateX(-50%)}}
+
+section{padding:clamp(72px,11vw,140px) 0}
+h2{font:900 clamp(2.4rem,7vw,5.6rem)/.9 var(--display);letter-spacing:-.055em;margin:.35em 0 .4em}
+
+/* about */
+.about{display:grid;grid-template-columns:1.1fr 1fr;gap:clamp(32px,6vw,96px);align-items:start}
+.about p{color:#c9c7c1;max-width:52ch}
+.about p+p{margin-top:1em}
+.quote{border-left:3px solid var(--accent);padding-left:18px;margin-top:28px}
+.facts{display:grid;gap:28px}
+.fact{border-top:1px solid var(--line);padding-top:16px}
+.fact ul{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.fact li{border:1px solid var(--line);border-radius:999px;padding:.35em .9em;font-size:.9rem}
+
+/* principles */
+.principles{background:var(--paper);color:var(--ink)}
+.principles .label{color:#5b605b}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid var(--ink);margin-top:40px}
+.card{padding:28px 22px 32px 0;border-right:1px solid #cfccc3}
+.card+.card{padding-left:22px}
+.card:last-child{border-right:0}
+.card .n{font:700 .8rem/1 var(--mono);color:var(--accent)}
+.card h3{font:900 1.6rem/1 var(--display);letter-spacing:-.04em;margin:18px 0 12px}
+.card p{font-size:.96rem;color:#3b3f3b}
+
+/* work */
+.runway{list-style:none;border-top:1px solid var(--line);margin-top:40px}
+.runway li{display:grid;grid-template-columns:80px 1fr 1.4fr auto;gap:24px;align-items:baseline;padding:28px 0;border-bottom:1px solid var(--line);transition:padding .3s}
+.runway li:hover{padding-left:12px}
+.runway li:hover h3{color:var(--accent)}
+.runway .n{font:700 .8rem/1 var(--mono);color:var(--muted)}
+.runway h3{font:900 clamp(1.8rem,4vw,3rem)/1 var(--display);letter-spacing:-.05em;transition:color .2s}
+.runway p{color:#b9b7b1}
+.note{margin-top:20px}
+
+
+/* projects */
+.live{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+.live a{display:flex;flex-direction:column;gap:14px;border:1px solid var(--line);padding:26px 22px;text-decoration:none;background:var(--ink-2);transition:border-color .2s,transform .3s}
+.live a:hover{border-color:var(--accent);transform:translateY(-4px)}
+.live h3{font:900 2rem/1 var(--display);letter-spacing:-.05em}
+.live p{color:#b9b7b1;font-size:.96rem;flex:1}
+.live .go{font:700 .78rem/1 var(--mono);letter-spacing:.12em;color:var(--accent)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4ade80;margin-right:8px;box-shadow:0 0 0 0 #4ade8088;animation:ping 2s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 8px #4ade8000}}
+@media (max-width:860px){.live{grid-template-columns:1fr}}
+
+/* contact */
+.contact{text-align:center;border-top:1px solid var(--line)}
+.contact h2{font-size:clamp(2.8rem,10vw,8.5rem)}
+.contact a.mail{font:900 clamp(1.2rem,3.4vw,2.4rem)/1.1 var(--display);letter-spacing:-.03em;text-decoration-color:var(--accent);text-underline-offset:.18em;word-break:break-all}
+.contact .hand{margin-top:22px}
+footer{border-top:1px solid var(--line);padding:22px 0}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* reveal on scroll */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s,transform .8s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+@media (max-width:860px){
+  .about{grid-template-columns:1fr}
+  .grid{grid-template-columns:1fr 1fr}
+  .card,.card+.card{padding:24px 16px 24px 0;border-right:0;border-bottom:1px solid #cfccc3}
+  .runway li{grid-template-columns:1fr;gap:8px}
+  h1 .tag{position:static;display:block;margin-top:14px}
+}
+@media (max-width:520px){.grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .thread path{stroke-dashoffset:0}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<main>
+  <header class="stage wrap" id="top">
+    <svg class="thread" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
+      <path pathLength="1" d="M -20 520 C 140 560, 240 420, 340 470 C 440 520, 470 360, 540 300 C 610 240, 720 300, 690 380 C 660 460, 560 420, 590 330 C 630 210, 820 250, 870 150 C 900 90, 960 70, 1020 40"/>
+    </svg>
+    <div class="masthead">
+      <a class="wordmark" href="#top" aria-label="Kapkoti Solution home">kapkoti<br>solution</a>
+      <div class="signal" aria-hidden="true"><i></i><i></i><i></i></div>
+    </div>
+
+    <h1 aria-label="Governed AI. Real output.">
+      <span>Governed</span>
+      <span class="accent">AI.</span>
+      <span>Real output.</span>
+      <span class="tag" aria-hidden="true">KAPKOTI SOLUTION / EST. 2026</span>
+    </h1>
+
+    <div class="hero-foot">
+      <p class="hand">low-risk by design ↘</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a class="chip solid" href="mailto:pawan@kapkotisolution.com">Start a project ↗</a>
+        <a class="chip" href="#about">What we do ↓</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>AI <b>✦</b> Governed <b>✦</b> Low-risk <b>✦</b> Output-focused <b>✦</b> Data <b>✦</b> Automation <b>✦</b> </span>
+      <span>AI <b>✦</b> Governed <b>✦</b> Low-risk <b>✦</b> Output-focused <b>✦</b> Data <b>✦</b> Automation <b>✦</b> </span>
+    </div>
+  </div>
+
+  <section id="about">
+    <div class="wrap about">
+      <div class="reveal">
+        <p class="label">01 / About</p>
+        <h2>Software that earns its keep.</h2>
+        <p>Kapkoti Solution builds governed AI software for small and medium businesses. We turn messy systems and scattered data into clear, useful output: faster answers, cleaner records and less manual work.</p>
+        <p>Every tool is low-risk by design, with safe defaults, full audit trails and your data kept under your control. No hype, no lock-in, just results you can check.</p>
+        <p class="hand quote">If you can't audit it, you can't trust it.</p>
+      </div>
+      <div class="facts reveal">
+        <div class="fact">
+          <p class="label">Who it's for</p>
+          <ul><li>Small businesses</li><li>Manufacturers</li><li>Regulated teams</li><li>Growing SMEs</li></ul>
+        </div>
+        <div class="fact">
+          <p class="label">What we work with</p>
+          <ul><li>Python</li><li>FastAPI</li><li>PostgreSQL</li><li>TypeScript</li><li>Next.js</li><li>Local LLMs</li><li>SQL</li></ul>
+        </div>
+        <div class="fact">
+          <p class="label">Based in</p>
+          <ul><li>United Kingdom</li><li>Working remotely</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="principles">
+    <div class="wrap">
+      <p class="label reveal">02 / Principles</p>
+      <h2 class="reveal">How we build.</h2>
+      <div class="grid reveal">
+        <article class="card"><p class="n">01</p><h3>AI where it helps</h3><p>Models answer questions and draft the work. People stay in charge of the decisions.</p></article>
+        <article class="card"><p class="n">02</p><h3>Governed</h3><p>Every action is checked against clear rules and logged, so you can see exactly what happened and why.</p></article>
+        <article class="card"><p class="n">03</p><h3>Low-risk</h3><p>Read-only by default, runs on your own machines where it matters, and fails safely instead of guessing.</p></article>
+        <article class="card"><p class="n">04</p><h3>Output-focused</h3><p>Judged by the hours saved and the errors avoided, not by the features on a list.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="work">
+    <div class="wrap">
+      <p class="label reveal">03 / Work</p>
+      <h2 class="reveal">What we build.</h2>
+      <ul class="runway reveal">
+        <li><span class="n">01</span><h3>Business systems</h3><p>Stock, sales, invoicing and finance tools built for how small UK businesses actually run.</p><span class="label">ERP</span></li>
+        <li><span class="n">02</span><h3>Ask your data</h3><p>Plain-English questions over your own databases, with every query checked before it runs.</p><span class="label">AI / Data</span></li>
+        <li><span class="n">03</span><h3>Smart forms</h3><p>Surveys and intake that feel like a conversation and return clean, structured answers.</p><span class="label">AI / UX</span></li>
+        <li><span class="n">04</span><h3>Automation</h3><p>The repetitive jobs between your systems, handled quietly and reliably.</p><span class="label">Ops</span></li>
+      </ul>
+      <p class="hand note">something else in mind? just ask ↓</p>
+    </div>
+  </section>
+
+  <section id="projects">
+    <div class="wrap">
+      <p class="label reveal">04 / Projects</p>
+      <h2 class="reveal">Live now.</h2>
+      <div class="live reveal">
+        <a href="https://sedno-demo.pages.dev" target="_blank" rel="noopener"><p class="label"><span class="dot"></span>Cloudflare</p><h3>Sedno</h3><p>A UK-first ERP for small businesses: stock, sales, invoicing and Making Tax Digital VAT.</p><span class="go">OPEN DEMO ↗</span></a>
+        <a href="https://floormind.pages.dev" target="_blank" rel="noopener"><p class="label"><span class="dot"></span>Cloudflare</p><h3>FloorMind</h3><p>Local-first AI for food and FMCG manufacturing. Ask your production data questions in plain English.</p><span class="go">OPEN SITE ↗</span></a>
+        <a href="https://frontend-three-zeta-45.vercel.app" target="_blank" rel="noopener"><p class="label"><span class="dot"></span>Vercel</p><h3>Elenchus</h3><p>Surveys run as guided conversations, with the AI kept on rails and answers returned clean.</p><span class="go">OPEN APP ↗</span></a>
+      </div>
+
+      <p class="reveal" style="margin-top:28px"><a class="chip" href="https://github.com/Pawansingh3889" target="_blank" rel="noopener">All work on GitHub ↗</a></p>
+    </div>
+  </section>
+
+  <section class="contact" id="contact">
+    <div class="wrap reveal">
+      <p class="label">05 / Contact</p>
+      <h2>Let's build.</h2>
+      <a class="mail" href="mailto:pawan@kapkotisolution.com">pawan@kapkotisolution.com</a>
+      <p class="hand">reply within one working day :)</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="label">© <span id="y">2026</span> Kapkoti Solution</span>
+    <span class="label">AI · Governed · Low-risk · Output-focused</span>
+  </div>
+</footer>
+
+<script>
+document.getElementById('y').textContent = new Date().getFullYear();
+const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && (e.target.classList.add('in'), io.unobserve(e.target))), {threshold: .15});
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
