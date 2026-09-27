@@ -20,9 +20,9 @@ AI calls always use Cloudflare Workers AI, including during Wrangler development
 ## Deploy
 
 1. Apply migrations: `pnpm exec wrangler d1 migrations apply kapkoti-intake --remote`.
-2. Set a random private salt through `pnpm exec wrangler secret put RATE_LIMIT_SALT`. Do not commit or expose it. Wrangler stores deployment credentials in its own authenticated configuration; permanent credential backups belong in the password store.
-3. `pnpm deploy` publishes the API and its preview website. The configured origin allowlist contains the production domain and the Worker preview only.
-4. GitHub Pages must use GitHub Actions as its build source. Merging into main publishes `public/` through `.github/workflows/pages.yml`.
+2. Publish the Worker and preview assets with `pnpm run deploy`. On first setup, the intake API returns unavailable until its secret is added.
+3. Set a random private salt through `pnpm exec wrangler secret put RATE_LIMIT_SALT`. Do not commit or expose it. Wrangler stores deployment credentials in its own authenticated configuration; permanent credential backups belong in the password store.
+4. GitHub Pages publishes the repository root from the `main` branch. Merging the root site files publishes the page with the custom domain.
 
 The browser API endpoint is in `public/app.js`. The AI provider is Cloudflare Workers AI, model `@cf/meta/llama-3.1-8b-instruct`. API payloads are capped at 65 KB, with up to 10 exchanges, 30 AI requests per hashed network address per day, 5 submission requests per address per day, and 300 total AI requests per day. Multiple visitors on a shared network share the address limit. Raising limits may increase usage costs.
 
