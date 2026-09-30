@@ -25,19 +25,19 @@ for (const font of ['/System/Library/Fonts/Supplemental/Georgia.ttf', '/System/L
 }
 
 const scenes = [
-  { name: 'hook', seconds: 5, draw: drawHook },
-  { name: 'inbox', seconds: 7, draw: drawInbox },
-  { name: 'ingestion', seconds: 8, draw: drawIngestion },
-  { name: 'erp', seconds: 11, draw: drawERP },
-  { name: 'stock', seconds: 5, draw: drawStock },
-  { name: 'invoices', seconds: 5, draw: drawInvoices },
-  { name: 'tax', seconds: 8, draw: drawTax },
-  { name: 'floor', seconds: 7, draw: drawFloor },
-  { name: 'payroll', seconds: 7, draw: drawPayroll },
-  { name: 'agents', seconds: 7, draw: drawAgents },
-  { name: 'human', seconds: 5, draw: drawHuman },
-  { name: 'pipeline', seconds: 9, draw: drawPipeline },
-  { name: 'close', seconds: 12, draw: drawClose },
+  { name: 'hook', seconds: 5, draw: drawHook, line: 'Life has enough little problems. Let’s solve one.' },
+  { name: 'inbox', seconds: 7, draw: drawInbox, line: 'Mail, documents, PDFs, orders and requests. It all arrives at once.' },
+  { name: 'ingestion', seconds: 8, draw: drawIngestion, line: 'Ingestion extracts the signal from the noise.' },
+  { name: 'erp', seconds: 11, draw: drawERP, line: 'One ERP underneath everything: stock, orders, invoices and people. This one is on the workbench.' },
+  { name: 'stock', seconds: 5, draw: drawStock, line: 'Stock levels, watched before they run out.' },
+  { name: 'invoices', seconds: 5, draw: drawInvoices, line: 'Three-way match, then posted. Exceptions reach a human.' },
+  { name: 'tax', seconds: 8, draw: drawTax, line: 'VAT returns, calculated from the ledger, and filed without the spreadsheet dance.' },
+  { name: 'floor', seconds: 7, draw: drawFloor, line: 'On the factory floor, OEE stops running on paper.' },
+  { name: 'payroll', seconds: 7, draw: drawPayroll, line: 'HR and payroll, on time, in either currency.' },
+  { name: 'agents', seconds: 7, draw: drawAgents, line: 'Agents flag the problems. Surveys keep making it better.' },
+  { name: 'human', seconds: 5, draw: drawHuman, line: 'AI does the fiddly work. You make the calls.' },
+  { name: 'pipeline', seconds: 9, draw: drawPipeline, line: 'One workflow, end to end, with governed AI underneath.' },
+  { name: 'close', seconds: 12, draw: drawClose, line: 'Kapkoti Solution. One pipeline for the work that falls between your systems. Tell us what you wish was easier.' },
 ];
 
 const totalSeconds = scenes.reduce((sum, s) => sum + s.seconds, 0);
@@ -590,7 +590,156 @@ for (const scene of scenes) {
   console.log(`  ${scene.name} done (${frame}/${totalFrames})`);
 }
 
-console.log('Encoding with ffmpeg…');
+console.log('Encoding video with ffmpeg…');
+const SILENT_MP4 = join(ROOT, '.cache', 'video-silent.mp4');
 execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(FRAMES_DIR, 'f%05d.png'),
-  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '22', '-movflags', '+faststart', OUT_MP4]);
+  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '22', '-movflags', '+faststart', SILENT_MP4]);
+
+console.log('Synthesising soundtrack…');
+const AUDIO_WAV = join(ROOT, '.cache', 'audio.wav');
+synthAudio(AUDIO_WAV, totalSeconds);
+
+console.log('Muxing sound…');
+execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', SILENT_MP4, '-i', AUDIO_WAV,
+  '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-shortest', '-movflags', '+faststart', OUT_MP4]);
 console.log(`Wrote ${OUT_MP4}`);
+
+// ---------- soundtrack ----------
+
+// ponytail: single-pass additive synthesis + macOS `say` narration; swap both if the film ever needs studio treatment
+function synthAudio(path, durationSeconds, narrationVoice = 'Daniel') { // 'Daniel' = en_GB, present on macOS
+  const SR = 44100;
+  const n = Math.ceil((durationSeconds + 2) * SR);
+  const buf = new Float64Array(n);
+  const beat = 60 / 96; // 96 BPM grid
+
+  const chordByScene = [
+    [0, 4, 9], [9, 0, 4], [2, 5, 9], [0, 7, 14], [4, 7, 11], [9, 12, 16], [5, 9, 12], [0, 4, 9],
+    [5, 9, 12], [9, 12, 16], [0, 4, 9], [0, 5, 12], [0, 4, 9, 14],
+  ];
+  const rootHz = (semi) => 146.83 * Math.pow(2, semi / 12); // D3
+
+  // music bed, quiet under the narration
+  let t0 = 0;
+  scenes.forEach((scene, si) => {
+    for (const semi of chordByScene[si]) {
+      addPad(buf, SR, t0, scene.seconds + 0.6, rootHz(semi), 0.05);
+      addPad(buf, SR, t0, scene.seconds + 0.6, rootHz(semi) * 2.002, 0.025); // octave shimmer
+    }
+    addWhoosh(buf, SR, t0 - 0.3, 0.7);
+    t0 += scene.seconds;
+  });
+
+  // plucks: pentatonic D major on the eighth-note grid, sparse and deterministic
+  const pent = [0, 2, 4, 7, 9, 12, 14, 16];
+  for (let step = 0; step * beat / 2 < durationSeconds; step++) {
+    const r = pseudo(step * 7919);
+    if (r < 0.75) continue; // sparse: narration needs room
+    const sceneIdx = sceneAt(scenes, step * beat / 2);
+    const chord = chordByScene[sceneIdx];
+    const semi = chord[Math.floor(pseudo(step * 31) * chord.length)] + (r > 0.9 ? 12 : 0);
+    addPluck(buf, SR, step * beat / 2, rootHz(semi) * 2, 0.035);
+  }
+
+  // bell on the closing call-to-action
+  let closeStart = 0;
+  for (let i = 0; i < scenes.length - 1; i++) closeStart += scenes[i].seconds;
+  addBell(buf, SR, closeStart + 4.8, rootHz(24), 0.1);
+
+  // narration: one macOS `say` clip per scene, mixed 0.4s after each scene start
+  mkdirSync(join(ROOT, '.cache', 'narration'), { recursive: true });
+  let sceneStart = 0;
+  scenes.forEach((scene, si) => {
+    const aiff = join(ROOT, '.cache', 'narration', `n${si}.aiff`);
+    if (scene.line) execFileSync('say', ['-v', narrationVoice, '-r', '168', '-o', aiff, scene.line]);
+    if (!scene.line) { sceneStart += scene.seconds; return; }
+    const raw = execFileSync('ffmpeg', ['-i', aiff, '-f', 'f32le', '-ac', '1', '-ar', String(SR), '-'], { maxBuffer: 64 * 1024 * 1024 });
+    const floats = new Float32Array(raw.buffer, raw.byteOffset, Math.floor(raw.length / 4));
+    mixRaw(buf, Math.round((sceneStart + 0.4) * SR), floats, 1.1);
+    sceneStart += scene.seconds;
+  });
+
+  // normalise and soft-clip
+  let peak = 0;
+  for (const v of buf) peak = Math.max(peak, Math.abs(v));
+  const g = peak > 0 ? 0.85 / peak : 1;
+  const pcm = Buffer.alloc(n * 2);
+  for (let i = 0; i < n; i++) {
+    const v = Math.tanh(buf[i] * g * 1.3) * 0.95;
+    pcm.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v * 32767))), i * 2);
+  }
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0); header.writeUInt32LE(36 + pcm.length, 4); header.write('WAVE', 8);
+  header.write('fmt ', 12); header.writeUInt32LE(16, 16); header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22); header.writeUInt32LE(SR, 24); header.writeUInt32LE(SR * 2, 28);
+  header.writeUInt16LE(2, 32); header.writeUInt16LE(16, 34);
+  header.write('data', 36); header.writeUInt32LE(pcm.length, 40);
+  writeFileSync(path, Buffer.concat([header, pcm]));
+}
+
+function pseudo(x) { return (Math.sin(x) + 1) / 2; } // deterministic 0..1
+
+function envAt(i, n, attack, release) {
+  const t = i / n;
+  if (t < attack) return t / attack;
+  if (t > 1 - release) return (1 - t) / release;
+  return 1;
+}
+
+function addPad(buf, SR, start, dur, hz, amp) {
+  const s = Math.round((start < 0 ? 0 : start) * SR), len = Math.round(dur * SR);
+  const out = new Float64Array(len);
+  for (let i = 0; i < len; i++) {
+    const e = envAt(i, len, 0.25, 0.35);
+    out[i] = (Math.sin(2 * Math.PI * hz * i / SR) + 0.5 * Math.sin(2 * Math.PI * hz * 1.003 * i / SR)) * e * amp;
+  }
+  mixRaw(buf, s, out);
+}
+
+function addPluck(buf, SR, start, hz, amp) {
+  const dur = 0.9, len = Math.round(dur * SR), s = Math.round(start * SR);
+  const out = new Float64Array(len);
+  for (let i = 0; i < len; i++) {
+    out[i] = Math.sin(2 * Math.PI * hz * i / SR) * Math.exp(-6 * i / len) * amp;
+  }
+  mixRaw(buf, s, out);
+}
+
+function addBell(buf, SR, start, hz, amp) {
+  const dur = 4, len = Math.round(dur * SR), s = Math.round(start * SR);
+  const out = new Float64Array(len);
+  for (let i = 0; i < len; i++) {
+    out[i] = (Math.sin(2 * Math.PI * hz * i / SR) + 0.3 * Math.sin(2 * Math.PI * hz * 2.76 * i / SR)) * Math.exp(-1.8 * i / len) * amp;
+  }
+  mixRaw(buf, s, out);
+}
+
+function addWhoosh(buf, SR, start, dur) {
+  const len = Math.round(dur * SR), s = Math.max(0, Math.round(start * SR));
+  const out = new Float64Array(len);
+  let smooth = 0;
+  for (let i = 0; i < len; i++) {
+    const e = envAt(i, len, 0.5, 0.4);
+    const raw = pseudo(i * 31.7 + s) * 2 - 1;
+    smooth = smooth * 0.985 + raw * 0.015; // cheap low-pass
+    out[i] = smooth * e * 0.5;
+  }
+  mixRaw(buf, s, out);
+}
+
+function mixRaw(buf, startSample, out, gain = 1) {
+  for (let i = 0; i < out.length; i++) {
+    const idx = startSample + i;
+    if (idx >= buf.length) break;
+    buf[idx] += out[i] * gain;
+  }
+}
+
+function sceneAt(scenes, timeSeconds) {
+  let t = 0;
+  for (let i = 0; i < scenes.length; i++) {
+    t += scenes[i].seconds;
+    if (timeSeconds < t) return i;
+  }
+  return scenes.length - 1;
+}
