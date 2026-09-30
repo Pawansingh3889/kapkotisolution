@@ -8,9 +8,11 @@
     "typecheck": "tsc --noEmit --allowJs --checkJs --strict false --target es2022 --module esnext --lib es2023,dom,dom.iterable worker.js public/app.js",
     "build": "wrangler deploy --dry-run --outdir dist",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "video": "node scripts/render-video.mjs"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.9",
     "eslint": "^10.11.0",
     "typescript": "^7.0.2",
     "wrangler": "4.132.0"
