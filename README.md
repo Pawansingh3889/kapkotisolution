@@ -15,29 +15,40 @@ pnpm build
 pnpm dev
 ```
 
-AI calls always use Cloudflare Workers AI, including during Wrangler development. The website intentionally points to the deployed API; use unit tests for isolated local intake tests. Never submit real visitor information during testing.
+AI calls use OpenRouter from the Cloudflare Worker. Add the API key with `pnpm exec wrangler secret put OPENROUTER_API_KEY`. The website intentionally points to the deployed API; use unit tests for isolated local intake tests. Never submit real visitor information during testing.
 
 ## Deploy
 
 1. Apply migrations: `pnpm exec wrangler d1 migrations apply kapkoti-intake --remote`.
-2. Publish the Worker and preview assets with `pnpm run deploy`. On first setup, the intake API returns unavailable until its secret is added.
-3. Set a random private salt through `pnpm exec wrangler secret put RATE_LIMIT_SALT`. Do not commit or expose it. Wrangler stores deployment credentials in its own authenticated configuration; permanent credential backups belong in the password store.
+2. Set `OPENROUTER_API_KEY` and `RATE_LIMIT_SALT` with `pnpm exec wrangler secret put OPENROUTER_API_KEY` and `pnpm exec wrangler secret put RATE_LIMIT_SALT`. Do not commit or expose either secret. Wrangler stores deployment credentials in its own authenticated configuration; permanent credential backups belong in the password store.
+3. Publish the Worker and preview assets with `pnpm run deploy`.
 4. GitHub Pages publishes the repository root from the `main` branch. Merging the root site files publishes the page with the custom domain.
 
-The browser API endpoint is in `public/app.js`. The AI provider is Cloudflare Workers AI, model `@cf/meta/llama-3.1-8b-instruct`. API payloads are capped at 65 KB, with up to 10 exchanges, 30 AI requests per hashed network address per day, 5 submission requests per address per day, and 300 total AI requests per day. Multiple visitors on a shared network share the address limit. Raising limits may increase usage costs.
+The browser API endpoint is in `public/app.js`. The AI provider is OpenRouter, model `openai/gpt-4o-mini`. API payloads are capped at 65 KB, with up to 10 exchanges, 30 AI requests per hashed network address per day, 5 submission requests per address per day, and 300 total AI requests per day. Multiple visitors on a shared network share the address limit. Raising limits may increase usage costs.
+
+## Email submitted briefs to Pawan
+
+Every saved submission is emailed to `pawan@kapkotisolution.com` through Resend. The plain-text email includes the submission reference and time, visitor name, contact method and details, consent version, approved brief, and full English/Hindi conversation. Contact details and conversation text are kept in the email body, never interpolated into mail headers.
+
+1. Create a [Resend account](https://resend.com/signup) and add `kapkotisolution.com` under Domains.
+2. Add Resend's sending-verification DNS records in GoDaddy and wait for the domain to show Verified. Keep the existing root-domain MX records that deliver incoming mail to GoDaddy. The sender is `notifications@kapkotisolution.com`.
+3. Create a Resend API key with sending access for this domain, then run `pnpm exec wrangler secret put RESEND_API_KEY`. Keep `RESEND_API_KEY` literally in the command and paste the key only at the hidden prompt. The success message must name `RESEND_API_KEY`.
+4. Apply migrations and deploy using the commands above. Migration `0002_submission_email.sql` adds delivery tracking; apply it before deploying the updated Worker.
+
+The Worker saves the submission before attempting email in the background. A once-per-minute scheduled task retries one pending email, including submissions saved before email was configured. Provider failures do not undo a saved brief. Missing configuration causes a failed email attempt and leaves the row pending. A successful Resend response sets `email_sent_at`; this records provider acceptance, not a confirmed inbox delivery. Resend's idempotency key suppresses duplicate attempts for 24 hours; a database outage lasting longer than that after an accepted send can produce a duplicate. Check Resend's delivery logs for bounces.
 
 ## Read and follow up on problems
 
 Open the private [Cloudflare D1 database](https://dash.cloudflare.com/95b5209ffbd303836bea1dfc300ee927/workers/d1/databases/b6f42a4c-baf9-4a15-8faf-b95d5d6d92e3) and use the Console:
 
 ```sql
-SELECT id, created_at, name, contact_method, contact, brief, conversation
+SELECT id, created_at, name, contact_method, contact, brief, conversation, email_sent_at
 FROM submissions WHERE status = 'new' ORDER BY created_at DESC;
 ```
 
-Reply personally from pawan@kapkotisolution.com, then set that row's status to `contacted` or `closed`. There is no automatic email notification. Check the inbox regularly to support the stated aim of replying within a few days. No public endpoint exposes submissions.
+Reply personally from pawan@kapkotisolution.com, then set that row's status to `contacted` or `closed`. Check the inbox regularly to support the stated aim of replying within a few days. Rows with a null `email_sent_at` are waiting for an accepted email send. No public endpoint exposes submissions.
 
-For a verified deletion request, find the specific submission by its reference and remove that row. The privacy disclosure does not promise a fixed retention period; review and remove closed requests when no longer needed. Abuse-prevention records expire after their UTC day and are cleaned on subsequent API traffic.
+For a verified deletion request, find the specific submission by its reference and remove that row and its emailed copies from the inbox and Resend. The privacy disclosure does not promise a fixed retention period; review and remove closed requests when no longer needed. Abuse-prevention records expire after their UTC day and are cleaned on subsequent API traffic.
 
 ## Boundaries
 
