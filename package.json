@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit --allowJs --checkJs --strict false --target es2022 --module esnext --lib es2023,dom,dom.iterable worker.js public/app.js",
     "build": "wrangler deploy --dry-run --outdir dist",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "sh scripts/sync-site.sh && wrangler deploy",
     "video": "node scripts/render-video.mjs"
   },
   "devDependencies": {
