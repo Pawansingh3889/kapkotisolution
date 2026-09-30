@@ -25,16 +25,19 @@ for (const font of ['/System/Library/Fonts/Supplemental/Georgia.ttf', '/System/L
 }
 
 const scenes = [
-  { name: 'hook', seconds: 7, draw: drawHook },
-  { name: 'inbox', seconds: 9, draw: drawInbox },
-  { name: 'ingestion', seconds: 11, draw: drawIngestion },
+  { name: 'hook', seconds: 5, draw: drawHook },
+  { name: 'inbox', seconds: 7, draw: drawInbox },
+  { name: 'ingestion', seconds: 8, draw: drawIngestion },
   { name: 'erp', seconds: 11, draw: drawERP },
-  { name: 'rag', seconds: 12, draw: drawRAG },
-  { name: 'agents', seconds: 12, draw: drawAgents },
-  { name: 'human', seconds: 8, draw: drawHuman },
-  { name: 'pipeline', seconds: 8, draw: drawPipeline },
-  { name: 'values', seconds: 8, draw: drawValues },
-  { name: 'close', seconds: 10, draw: drawClose },
+  { name: 'stock', seconds: 5, draw: drawStock },
+  { name: 'invoices', seconds: 5, draw: drawInvoices },
+  { name: 'tax', seconds: 8, draw: drawTax },
+  { name: 'floor', seconds: 7, draw: drawFloor },
+  { name: 'payroll', seconds: 7, draw: drawPayroll },
+  { name: 'agents', seconds: 7, draw: drawAgents },
+  { name: 'human', seconds: 5, draw: drawHuman },
+  { name: 'pipeline', seconds: 9, draw: drawPipeline },
+  { name: 'close', seconds: 12, draw: drawClose },
 ];
 
 const totalSeconds = scenes.reduce((sum, s) => sum + s.seconds, 0);
@@ -63,13 +66,6 @@ function eyebrow(ctx, text, y = 70) {
   ctx.font = '700 22px Manrope, Helvetica, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(text.toUpperCase(), W / 2, y);
-}
-
-// progress within scene: 0..1, clamped fade windows
-function fadeInOut(t, inFrac = 0.15, outFrac = 0.15) {
-  if (t < inFrac) return ease(t / inFrac);
-  if (t > 1 - outFrac) return ease((1 - t) / outFrac);
-  return 1;
 }
 
 function withAlpha(hex, a) {
@@ -107,20 +103,26 @@ function drawHook(ctx, t) {
   ctx.globalAlpha = 1;
 }
 
+function fadeInOut(t, inFrac = 0.15, outFrac = 0.15) {
+  if (t < inFrac) return ease(t / inFrac);
+  if (t > 1 - outFrac) return ease((1 - t) / outFrac);
+  return 1;
+}
+
 function drawInbox(ctx, t) {
   bg(ctx);
   eyebrow(ctx, '01 / The problem');
-  caption(ctx, ['Work arrives faster than', 'a team can process it.']);
+  caption(ctx, ['Mail, docs, PDFs, orders, requests:', 'it all arrives at once.']);
   const items = [
-    { label: 'INVOICE', dx: 0.10, dy: 0.62, r: -0.10, delay: 0.00 },
-    { label: 'SALES ORDER', dx: 0.26, dy: 0.44, r: 0.07, delay: 0.35 },
-    { label: 'PDF · 4 pages', dx: 0.44, dy: 0.66, r: -0.05, delay: 0.70 },
-    { label: 'POD', dx: 0.60, dy: 0.40, r: 0.11, delay: 1.05 },
-    { label: 'REMITTANCE', dx: 0.76, dy: 0.60, r: -0.08, delay: 1.40 },
-    { label: 'EXCEL FILE', dx: 0.88, dy: 0.46, r: 0.05, delay: 1.75 },
+    { label: 'INVOICE', dx: 0.10, dy: 0.60, r: -0.10, delay: 0.00 },
+    { label: 'SALES ORDER', dx: 0.26, dy: 0.42, r: 0.07, delay: 0.12 },
+    { label: 'PDF · 4 pages', dx: 0.44, dy: 0.64, r: -0.05, delay: 0.24 },
+    { label: 'POD', dx: 0.60, dy: 0.38, r: 0.11, delay: 0.36 },
+    { label: 'REMITTANCE', dx: 0.76, dy: 0.58, r: -0.08, delay: 0.48 },
+    { label: 'REQUEST', dx: 0.88, dy: 0.44, r: 0.05, delay: 0.60 },
   ];
   for (const it of items) {
-    const p = ease(Math.max(0, Math.min(1, (t * scenes[1].seconds - it.delay) / 1.2)));
+    const p = ease(Math.max(0, Math.min(1, (t - it.delay) / 0.22)));
     if (p <= 0) continue;
     const x = lerp(-200, it.dx * W, p);
     const y = it.dy * H + Math.sin((x + it.dx * 900) / 90) * 10;
@@ -152,20 +154,17 @@ function drawIngestion(ctx, t) {
   const sweep = ease(Math.min(1, t * 1.6));
   const x0 = W * 0.22, y0 = H * 0.16, w0 = W * 0.42, h0 = H * 0.60;
   card(ctx, x0, y0, w0, h0, '#ffffff');
-  // document lines
   for (let i = 0; i < 7; i++) {
     ctx.fillStyle = withAlpha(INK, 0.3);
     ctx.fillRect(x0 + 30, y0 + 40 + i * 34, w0 - 60 - (i % 3) * 60, 10);
   }
   ctx.fillStyle = withAlpha(INK, 0.5);
   ctx.fillRect(x0 + 30, y0 + h0 - 70, 160, 26);
-  // scan line
   const sx = x0 + sweep * w0;
   ctx.fillStyle = withAlpha(ACCENT, 0.9);
   ctx.fillRect(sx - 2, y0, 4, h0);
   ctx.fillStyle = withAlpha(ACCENT, 0.15);
   ctx.fillRect(sx - 40, y0, 40, h0);
-  // extracted chips fly out
   const chips = [['Supplier', 0.30], ['PO number', 0.42], ['Total', 0.55], ['Due date', 0.68]];
   chips.forEach(([label, d], i) => {
     const p = ease(Math.max(0, Math.min(1, (t - d) / 0.5)));
@@ -188,9 +187,8 @@ function drawIngestion(ctx, t) {
 
 function drawERP(ctx, t) {
   bg(ctx);
-  eyebrow(ctx, '03 / System of record · Sedno, live demo');
-  caption(ctx, ['Matched work posts itself', 'into the ERP.']);
-  // ledger grid
+  eyebrow(ctx, '03 / The system of record · Kapkoti ERP, on the workbench');
+  caption(ctx, ['One ERP underneath everything:', 'stock, orders, invoices, people.']);
   const gx = W * 0.14, gy = H * 0.18, gw = W * 0.72, gh = H * 0.44;
   card(ctx, gx, gy, gw, gh, '#ffffff');
   ctx.fillStyle = INK;
@@ -198,11 +196,15 @@ function drawERP(ctx, t) {
   ctx.fillStyle = CREAM;
   ctx.font = '700 18px Manrope, Helvetica, sans-serif';
   ctx.textAlign = 'left';
-  ['STOCK', 'SALES', 'INVOICE', 'STATUS'].forEach((h, i) => ctx.fillText(h, gx + 30 + i * (gw - 60) / 4, gy + 29));
-  // rows appear
-  const rows = [['SED-014', 'Order 1042', '₹ 48,200', 'POSTED'], ['SED-015', 'Invoice 331', '₹ 12,875', 'MATCHED'], ['SED-016', 'Order 1043', '₹ 96,400', 'POSTED'], ['SED-017', 'Invoice 332', '₹ 7,310', 'MATCHED']];
+  ['MODULE', 'RECORD', 'AMOUNT', 'STATUS'].forEach((h, i) => ctx.fillText(h, gx + 30 + i * (gw - 60) / 4, gy + 29));
+  const rows = [
+    ['STOCK', 'GRPO 221', '₹ 96,400', 'POSTED'],
+    ['SALES', 'Order 1042', '£ 1,480', 'POSTED'],
+    ['INVOICE', 'Invoice 331', '₹ 12,875', 'MATCHED'],
+    ['INVOICE', 'Invoice 332', '£ 7,310', 'MATCHED'],
+  ];
   rows.forEach((row, r) => {
-    const p = ease(Math.max(0, Math.min(1, (t * 2.2 - r * 0.5) / 0.5)));
+    const p = ease(Math.max(0, Math.min(1, (t * 2.2 - r * 0.45) / 0.5)));
     if (p <= 0) return;
     ctx.globalAlpha = p;
     const ry = gy + 62 + r * 52;
@@ -212,89 +214,257 @@ function drawERP(ctx, t) {
     row.forEach((cell, c) => ctx.fillText(cell, gx + 30 + c * (gw - 60) / 4, ry + 8));
     ctx.globalAlpha = 1;
   });
-  // a chip slides in under the table
-  const p = ease(Math.max(0, Math.min(1, (t - 1.1) / 0.4)));
+  // workbench chip slides in under the table
+  const p = ease(Math.max(0, Math.min(1, (t - 0.62) / 0.35)));
   const px = lerp(W + 300, W * 0.62, p);
   ctx.globalAlpha = p;
   ctx.fillStyle = ACCENT;
   ctx.beginPath();
-  ctx.roundRect(px, gy + gh + 30, 260, 50, 25);
+  ctx.roundRect(px, gy + gh + 30, 300, 50, 25);
   ctx.fill();
   ctx.fillStyle = CREAM;
   ctx.font = '700 18px Manrope, Helvetica, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('no human handling', px + 130, gy + gh + 63);
+  ctx.fillText('the Kapkoti ERP · on the workbench', px + 150, gy + gh + 63);
   ctx.globalAlpha = 1;
 }
 
-function drawRAG(ctx, t) {
+function drawStock(ctx, t) {
   bg(ctx, INK);
-  eyebrow(ctx, '04 / Governed answers · FloorMind, live site');
-  caption(ctx, ['Ask your own data a question,', 'with governed access.'], H - 100, CREAM);
-  // question bubble
-  const q = ease(Math.min(1, t * 2));
-  card(ctx, W * 0.12, lerp(-80, H * 0.16, q), 430, 58, CREAM, 29);
-  ctx.fillStyle = INK;
-  ctx.font = '600 20px Manrope, Helvetica, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('What’s happening on the floor?', W * 0.12 + 30, lerp(-80, H * 0.16, q) + 37);
-  // data bars light up
-  const bars = [0.35, 0.62, 0.48, 0.8, 0.55];
+  eyebrow(ctx, '04 / STOCK · SEDNO, LIVE DEMO');
+  caption(ctx, ['Stock levels, watched', 'before they run out.'], H - 100, CREAM);
+  const bars = [0.72, 0.48, 0.85, 0.22, 0.6];
   bars.forEach((h, i) => {
-    const p = ease(Math.max(0, Math.min(1, (t * 1.6 - 0.25 - i * 0.12) / 0.4)));
-    const bh = h * H * 0.34 * p;
-    const bx = W * 0.16 + i * 76, by = H * 0.66 - bh;
-    ctx.fillStyle = i === 3 ? ACCENT : withAlpha(CREAM, 0.85);
+    const p = ease(Math.max(0, Math.min(1, (t * 1.6 - i * 0.1) / 0.4)));
+    const bh = h * H * 0.36 * p;
+    const bx = W * 0.18 + i * 82, by = H * 0.64 - bh;
+    ctx.fillStyle = h < 0.3 ? ACCENT : withAlpha(CREAM, 0.85);
     ctx.beginPath();
-    ctx.roundRect(bx, by, 48, bh, 8);
+    ctx.roundRect(bx, by, 50, bh, 8);
     ctx.fill();
   });
-  // answer card
-  const a = ease(Math.max(0, Math.min(1, (t - 0.55) / 0.45)));
-  ctx.globalAlpha = a;
-  card(ctx, W * 0.56, H * 0.30, 400, 210, CREAM);
-  ctx.fillStyle = INK;
-  ctx.font = '700 17px Manrope, Helvetica, sans-serif';
-  ctx.fillText('GOVERNED ANSWER', W * 0.56 + 28, H * 0.30 + 40);
-  ctx.font = '500 19px Manrope, Helvetica, sans-serif';
-  ['Line 3 output is up 8% this shift.', 'Scrap is concentrated in one batch.', 'Access limited to production data.'].forEach((line, i) => ctx.fillText(line, W * 0.56 + 28, H * 0.30 + 82 + i * 36));
-  ctx.globalAlpha = 1;
-}
-
-function drawAgents(ctx, t) {
-  bg(ctx);
-  eyebrow(ctx, '05 / Agents on top · Elenchus, live app');
-  caption(ctx, ['Agents watch the flow and', 'flag the problems.']);
-  const bubbles = [
-    { text: 'Invoice total differs from PO by ₹ 4,200', good: false, delay: 0.0 },
-    { text: '3-way match failed: no GRPO yet', good: false, delay: 0.3 },
-    { text: 'Stock below reorder point: SED-014', good: false, delay: 0.6 },
-    { text: 'Order 1043 matches everything', good: true, delay: 0.9 },
-  ];
-  bubbles.forEach((b, i) => {
-    const p = ease(Math.max(0, Math.min(1, (t - b.delay) / 0.5)));
-    if (p <= 0) return;
-    const y = H * 0.18 + i * 76;
-    const x = i % 2 ? W * 0.10 : W * 0.30;
-    ctx.globalAlpha = p;
-    card(ctx, x, y, 560, 56, i % 2 ? '#ffffff' : SOFT, 28);
-    ctx.fillStyle = b.good ? '#3d6b4f' : ACCENT;
+  const alert = ease(Math.max(0, Math.min(1, (t - 0.5) / 0.4)));
+  if (alert > 0) {
+    ctx.globalAlpha = alert;
+    card(ctx, W * 0.58, H * 0.26, 400, 120, CREAM);
+    ctx.fillStyle = ACCENT;
     ctx.beginPath();
-    ctx.arc(x + 32, y + 28, 10, 0, Math.PI * 2);
+    ctx.arc(W * 0.58 + 34, H * 0.26 + 60, 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = INK;
-    ctx.font = '500 19px Manrope, Helvetica, sans-serif';
+    ctx.font = '600 19px Manrope, Helvetica, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(b.text, x + 56, y + 35);
+    ctx.fillText('SED-014 below reorder point', W * 0.58 + 62, H * 0.26 + 52);
+    ctx.font = '500 16px Manrope, Helvetica, sans-serif';
+    ctx.fillText('Reorder raised: ₹ 24,300 across 3 suppliers', W * 0.58 + 62, H * 0.26 + 84);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawInvoices(ctx, t) {
+  bg(ctx);
+  eyebrow(ctx, '05 / INVOICES · SEDNO, LIVE DEMO');
+  caption(ctx, ['Three-way match, then posted.', 'Exceptions reach a human.']);
+  const gx = W * 0.16, gy = H * 0.20, gw = W * 0.68, gh = H * 0.42;
+  card(ctx, gx, gy, gw, gh, '#ffffff');
+  ctx.fillStyle = INK;
+  ctx.fillRect(gx, gy, gw, 42);
+  ctx.fillStyle = CREAM;
+  ctx.font = '700 17px Manrope, Helvetica, sans-serif';
+  ctx.textAlign = 'left';
+  ['PO', 'GRPO', 'INVOICE', 'RESULT'].forEach((h, i) => ctx.fillText(h, gx + 28 + i * (gw - 56) / 4, gy + 28));
+  const rows = [
+    ['£ 1,480', 'received', '₹ 12,875', 'AUTO-POSTED'],
+    ['₹ 96,400', 'pending', '£ 7,310', 'EXCEPTION'],
+  ];
+  rows.forEach((row, r) => {
+    const p = ease(Math.max(0, Math.min(1, (t * 2 - r * 0.6) / 0.5)));
+    if (p <= 0) return;
+    ctx.globalAlpha = p;
+    const ry = gy + 66 + r * 56;
+    ctx.font = '500 17px Manrope, Helvetica, sans-serif';
+    row.forEach((cell, c) => {
+      ctx.fillStyle = c === 3 ? (r === 0 ? '#3d6b4f' : ACCENT) : INK;
+      ctx.fillText(cell, gx + 28 + c * (gw - 56) / 4, ry);
+    });
     ctx.globalAlpha = 1;
   });
 }
 
+function drawTax(ctx, t) {
+  bg(ctx, INK);
+  eyebrow(ctx, '06 / TAX · VAT RETURNS & HMRC FILING, ON THE WORKBENCH');
+  caption(ctx, ['VAT calculated from the ledger,', 'filed without the spreadsheet dance.'], H - 100, CREAM);
+  const card_ = ease(Math.max(0, Math.min(1, t * 2.4)));
+  if (card_ > 0) {
+    ctx.globalAlpha = card_;
+    card(ctx, W * 0.24, H * 0.16, 520, 300, CREAM);
+    ctx.fillStyle = INK;
+    ctx.font = '700 20px Manrope, Helvetica, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('VAT RETURN · Q3', W * 0.24 + 34, H * 0.16 + 48);
+    const lines = [
+      ['Output tax', '£ 8,410'],
+      ['Input tax', '£ 3,260'],
+      ['Due to HMRC', '£ 5,150'],
+    ];
+    lines.forEach(([label, val], i) => {
+      const p = ease(Math.max(0, Math.min(1, (t * 2.6 - 0.4 - i * 0.25) / 0.4)));
+      if (p <= 0) return;
+      ctx.globalAlpha = p;
+      const y = H * 0.16 + 106 + i * 48;
+      ctx.font = '500 19px Manrope, Helvetica, sans-serif';
+      ctx.fillText(label, W * 0.24 + 34, y);
+      ctx.font = '700 19px Manrope, Helvetica, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(val, W * 0.24 + 486, y);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
+    });
+    const stamp = ease(Math.max(0, Math.min(1, (t - 0.72) / 0.25)));
+    if (stamp > 0) {
+      ctx.globalAlpha = stamp;
+      ctx.fillStyle = ACCENT;
+      ctx.beginPath();
+      ctx.roundRect(W * 0.30, H * 0.16 + 210, 400, 52, 26);
+      ctx.fill();
+      ctx.fillStyle = CREAM;
+      ctx.font = '700 17px Manrope, Helvetica, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('filed · MTD-ready · audit trail kept', W * 0.30 + 200, H * 0.16 + 243);
+      // India GST note
+      ctx.font = '500 15px Manrope, Helvetica, sans-serif';
+      ctx.fillStyle = INK;
+      ctx.fillText('India: the same pattern, GST returns in ₹', W * 0.30 + 200, H * 0.16 + 288);
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawFloor(ctx, t) {
+  bg(ctx);
+  eyebrow(ctx, '07 / FACTORY FLOOR · LIVE OEE');
+  caption(ctx, ['The floor stops running on paper.']);
+  // shift terminal strip
+  card(ctx, W * 0.16, H * 0.18, W * 0.68, 60, '#ffffff');
+  ctx.fillStyle = ACCENT;
+  ctx.beginPath();
+  ctx.arc(W * 0.16 + 32, H * 0.18 + 30, 9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = INK;
+  ctx.font = '600 19px Manrope, Helvetica, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Shift 2 · Line 3 · OEE 87%', W * 0.16 + 58, H * 0.18 + 38);
+  // six cells light up
+  const cells = [0.86, 0.91, 0.74, 0.88, 0.95, 0.69];
+  cells.forEach((oee, i) => {
+    const p = ease(Math.max(0, Math.min(1, (t * 1.5 - i * 0.14) / 0.45)));
+    if (p <= 0) return;
+    const cw = 120, cx = W * 0.12 + i * 176, cy = H * 0.60;
+    ctx.globalAlpha = p;
+    card(ctx, cx, cy - 90 * oee * p, cw, 90 * oee * p + 60, oee < 0.75 ? withAlpha(ACCENT, 0.25) : '#ffffff', 12);
+    ctx.fillStyle = INK;
+    ctx.font = '700 15px Manrope, Helvetica, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`CELL ${i + 1}`, cx + cw / 2, cy + 28);
+    ctx.font = '600 22px Manrope, Helvetica, sans-serif';
+    ctx.fillText(`${Math.round(oee * 100)}%`, cx + cw / 2, cy - 90 * oee * p + 40);
+    ctx.globalAlpha = 1;
+  });
+}
+
+function drawPayroll(ctx, t) {
+  bg(ctx, INK);
+  eyebrow(ctx, '08 / HR & PAYROLL · ON THE WORKBENCH');
+  caption(ctx, ['Payday, on time, in either currency.'], H - 100, CREAM);
+  const slips = [
+    { name: 'A. Sharma', net: '₹ 86,400', gross: '₹ 1,02,000', delay: 0.0, x: 0.14 },
+    { name: 'J. Smith', net: '£ 2,480', gross: '£ 3,100', delay: 0.15, x: 0.40 },
+    { name: 'R. Verma', net: '₹ 74,200', gross: '₹ 88,000', delay: 0.30, x: 0.66 },
+  ];
+  slips.forEach((s) => {
+    const p = ease(Math.max(0, Math.min(1, (t - s.delay) / 0.45)));
+    if (p <= 0) return;
+    const x = s.x * W, y = H * 0.18;
+    ctx.globalAlpha = p;
+    card(ctx, x, y, 300, 250, CREAM);
+    ctx.fillStyle = INK;
+    ctx.font = '700 18px Manrope, Helvetica, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`PAYSLIP · ${s.name}`, x + 26, y + 40);
+    ctx.font = '500 16px Manrope, Helvetica, sans-serif';
+    ctx.fillText('Gross', x + 26, y + 92);
+    ctx.fillText('Deductions', x + 26, y + 122);
+    ctx.fillText('Net pay', x + 26, y + 158);
+    ctx.font = '700 17px Manrope, Helvetica, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(s.gross, x + 274, y + 92);
+    ctx.fillText('computed', x + 274, y + 122);
+    ctx.fillStyle = ACCENT;
+    ctx.fillText(s.net, x + 274, y + 158);
+    // progress line
+    ctx.fillStyle = withAlpha(INK, 0.25);
+    ctx.fillRect(x + 26, y + 200, 248, 6);
+    ctx.fillStyle = ACCENT;
+    ctx.fillRect(x + 26, y + 200, 248 * p, 6);
+    ctx.globalAlpha = 1;
+  });
+}
+
+function drawAgents(ctx, t) {
+  bg(ctx);
+  eyebrow(ctx, '09 / AGENTS & SURVEYS · ELENCHUS, LIVE APP');
+  caption(ctx, ['Agents flag the problems.', 'Surveys keep making it better.']);
+  const bubbles = [
+    { text: 'Invoice 332 differs from PO by £ 240', y: 0.16, delay: 0.0 },
+    { text: 'VAT box 6 doesn’t tie to the ledger', y: 0.32, delay: 0.18 },
+    { text: 'Cell 4 OEE fell 9% this week', y: 0.48, delay: 0.36 },
+    { text: '“What slowed you down this shift?”', y: 0.64, delay: 0.54, survey: true },
+  ];
+  bubbles.forEach((b) => {
+    const p = ease(Math.max(0, Math.min(1, (t - b.delay) / 0.4)));
+    if (p <= 0) return;
+    const x = b.survey ? W * 0.30 : W * 0.10;
+    ctx.globalAlpha = p;
+    card(ctx, x, b.y * H, 560, 56, b.survey ? SOFT : '#ffffff', 28);
+    ctx.fillStyle = b.survey ? '#3d6b4f' : ACCENT;
+    ctx.beginPath();
+    ctx.arc(x + 32, b.y * H + 28, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = INK;
+    ctx.font = '500 19px Manrope, Helvetica, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(b.text, x + 56, b.y * H + 35);
+    ctx.globalAlpha = 1;
+  });
+  // loop arrow back to the pipeline
+  const loop = ease(Math.max(0, Math.min(1, (t - 0.7) / 0.3)));
+  if (loop > 0) {
+    ctx.globalAlpha = loop;
+    ctx.strokeStyle = ACCENT;
+    ctx.lineWidth = 4;
+    ctx.setLineDash([10, 8]);
+    ctx.beginPath();
+    ctx.moveTo(W * 0.30 + 280, H * 0.64 + 60);
+    ctx.bezierCurveTo(W * 0.18, H * 0.86, W * 0.06, H * 0.5, W * 0.10 + 40, H * 0.16 + 70);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = ACCENT;
+    ctx.beginPath();
+    ctx.arc(W * 0.10 + 40, H * 0.16 + 70, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = '600 16px Manrope, Helvetica, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('feedback re-tunes the whole pipeline', W * 0.34, H * 0.80);
+    ctx.globalAlpha = 1;
+  }
+}
+
 function drawHuman(ctx, t) {
   bg(ctx);
-  eyebrow(ctx, '06 / People stay in charge');
+  eyebrow(ctx, '10 / PEOPLE STAY IN CHARGE');
   caption(ctx, ['AI does the fiddly work.', 'You make the calls.']);
-  const p = ease(Math.min(1, t * 1.4));
   card(ctx, W * 0.24, H * 0.24, 620, 150, '#ffffff');
   ctx.fillStyle = ACCENT;
   ctx.beginPath();
@@ -306,9 +476,9 @@ function drawHuman(ctx, t) {
   ctx.fillText('Invoice 331 differs from PO 88 by ₹ 4,200.', W * 0.24 + 80, H * 0.24 + 66);
   ctx.font = '400 17px Manrope, Helvetica, sans-serif';
   ctx.fillText('Suggested: request the supplier’s revised copy.', W * 0.24 + 80, H * 0.24 + 100);
-  // cursor moves to approve
-  const cx = lerp(W * 0.16, W * 0.24 + 470, ease(Math.max(0, Math.min(1, (t - 0.45) / 0.35))));
-  const cy = lerp(H * 0.9, H * 0.24 + 190, ease(Math.max(0, Math.min(1, (t - 0.45) / 0.35))));
+  const p = ease(Math.max(0, Math.min(1, (t - 0.35) / 0.3)));
+  const cx = lerp(W * 0.16, W * 0.24 + 470, p);
+  const cy = lerp(H * 0.9, H * 0.24 + 190, p);
   const click = t > 0.85 ? (Math.sin((t - 0.85) * 40) + 1) / 2 : 1;
   ctx.fillStyle = INK;
   ctx.beginPath();
@@ -318,7 +488,6 @@ function drawHuman(ctx, t) {
   ctx.font = '700 18px Manrope, Helvetica, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Send to supplier', W * 0.24 + 470, H * 0.24 + 196);
-  // cursor arrow
   ctx.save();
   ctx.translate(cx, cy);
   ctx.scale(click * 0.2 + 0.8, click * 0.2 + 0.8);
@@ -334,12 +503,12 @@ function drawHuman(ctx, t) {
 
 function drawPipeline(ctx, t) {
   bg(ctx, INK);
-  eyebrow(ctx, '07 / One workflow');
-  caption(ctx, ['From a messy inbox to a decision,', 'with governed AI underneath.'], H - 100, CREAM);
-  const nodes = ['INBOX', 'INGEST', 'ERP', 'RAG', 'AGENTS', 'YOU'];
+  eyebrow(ctx, '11 / ONE WORKFLOW, END TO END');
+  caption(ctx, ['From a messy inbox to a filed return,', 'with governed AI underneath.'], H - 100, CREAM);
+  const nodes = ['INBOX', 'INGEST', 'ERP', 'OPERATE', 'SURVEY', 'YOU'];
   const nodeW = 150, gap = (W - 120 - nodes.length * nodeW) / (nodes.length - 1);
   nodes.forEach((label, i) => {
-    const p = ease(Math.max(0, Math.min(1, (t * 2.2 - i * 0.35) / 0.5)));
+    const p = ease(Math.max(0, Math.min(1, (t * 2 - i * 0.3) / 0.5)));
     const x = 60 + i * (nodeW + gap), y = H * 0.42;
     ctx.globalAlpha = p;
     card(ctx, x, y, nodeW, 84, i === nodes.length - 1 ? ACCENT : CREAM, 16);
@@ -355,7 +524,6 @@ function drawPipeline(ctx, t) {
       ctx.moveTo(px + 4, y + 42);
       ctx.lineTo(x - 6, y + 42);
       ctx.stroke();
-      // pulse travelling along the link
       const pulse = ((t * 0.6 + i * 0.16) % 1);
       ctx.fillStyle = ACCENT;
       ctx.beginPath();
@@ -367,56 +535,39 @@ function drawPipeline(ctx, t) {
   ctx.fillStyle = withAlpha(CREAM, 0.9);
   ctx.font = '500 20px Manrope, Helvetica, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Sedno · FloorMind · Elenchus, on top of one pipeline', W / 2, H * 0.60);
-}
-
-function drawValues(ctx, t) {
-  bg(ctx);
-  const values = [['01', 'Understand the real problem.'], ['02', 'Build something that helps.'], ['03', 'Keep making it better.']];
-  values.forEach(([n, text], i) => {
-    const p = ease(Math.max(0, Math.min(1, (t * 1.8 - i * 0.5) / 0.5)));
-    if (p <= 0) return;
-    const y = H * 0.28 + i * 110;
-    ctx.globalAlpha = p;
-    ctx.fillStyle = ACCENT;
-    ctx.font = '700 40px Georgia, serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(n, W / 2 - 210, y);
-    ctx.fillStyle = INK;
-    ctx.font = '600 34px Georgia, serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(text, W / 2 - 180, y);
-    ctx.globalAlpha = 1;
-  });
+  ctx.fillText('stock · invoices · VAT & HMRC · factory floor · HR & payroll', W / 2, H * 0.62);
 }
 
 function drawClose(ctx, t) {
   bg(ctx, INK);
   const a = fadeInOut(t, 0.1, 0.1);
   ctx.globalAlpha = a;
-  // k· mark
   ctx.fillStyle = CREAM;
   ctx.beginPath();
-  ctx.roundRect(W / 2 - 46, H * 0.20, 92, 92, 26);
+  ctx.roundRect(W / 2 - 46, H * 0.18, 92, 92, 26);
   ctx.fill();
   ctx.fillStyle = INK;
   ctx.font = 'bold 60px Georgia, serif';
   ctx.textAlign = 'center';
-  ctx.fillText('k', W / 2 - 6, H * 0.20 + 66);
+  ctx.fillText('k', W / 2 - 6, H * 0.18 + 66);
   ctx.fillStyle = ACCENT;
   ctx.beginPath();
-  ctx.arc(W / 2 + 16, H * 0.20 + 56, 5, 0, Math.PI * 2);
+  ctx.arc(W / 2 + 16, H * 0.18 + 56, 5, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = CREAM;
   ctx.font = 'bold 44px Georgia, serif';
-  ctx.fillText('Kapkoti Solution', W / 2, H * 0.20 + 190);
+  ctx.fillText('Kapkoti Solution', W / 2, H * 0.18 + 190);
   ctx.font = '500 26px Manrope, Helvetica, sans-serif';
-  ctx.fillText('AI for the work that falls between your systems.', W / 2, H * 0.20 + 250);
+  ctx.fillText('One pipeline for the work that falls between your systems.', W / 2, H * 0.18 + 250);
+  ctx.font = '600 20px Manrope, Helvetica, sans-serif';
+  ctx.fillStyle = withAlpha(CREAM, 0.8);
+  ctx.fillText('From mail and orders to stock, invoices, VAT & HMRC,', W / 2, H * 0.18 + 300);
+  ctx.fillText('the factory floor, HR and payroll. Elenchus keeps it improving.', W / 2, H * 0.18 + 334);
   ctx.fillStyle = ACCENT;
   ctx.font = '700 26px Manrope, Helvetica, sans-serif';
-  const beat = Math.min(1, Math.max(0, (t - 0.35) * 2.2));
+  const beat = Math.min(1, Math.max(0, (t - 0.4) * 2));
   ctx.globalAlpha = a * beat;
-  ctx.fillText('Tell us what you wish was easier · kapkotisolution.com', W / 2, H * 0.72);
+  ctx.fillText('Tell us what you wish was easier · www.kapkotisolution.com', W / 2, H * 0.74);
   ctx.globalAlpha = 1;
 }
 
@@ -432,7 +583,7 @@ let frame = 0;
 for (const scene of scenes) {
   const count = scene.seconds * FPS;
   for (let i = 0; i < count; i++) {
-    scene.draw(ctx, i / count, i, count);
+    scene.draw(ctx, i / count);
     writeFileSync(join(FRAMES_DIR, `f${String(frame).padStart(5, '0')}.png`), canvas.toBuffer('image/png'));
     frame++;
   }
