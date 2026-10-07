@@ -715,10 +715,10 @@ function synthAudio(path, durationSeconds) {
   mkdirSync(join(ROOT, '.cache'), { recursive: true });
   let peak = 0;
   for (const v of buf) peak = Math.max(peak, Math.abs(v));
-  const g = peak > 0 ? 0.85 / peak : 1;
+  const g = peak > 0 ? 0.89 / peak : 1;   // linear headroom, no saturation
   const pcm = Buffer.alloc(n * 2);
   for (let i = 0; i < n; i++) {
-    const v = Math.tanh(buf[i] * g * 1.3) * 0.95;
+    const v = buf[i] * g;
     pcm.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v * 32767))), i * 2);
   }
   const header = Buffer.alloc(44);
@@ -730,13 +730,19 @@ function synthAudio(path, durationSeconds) {
   writeFileSync(path, Buffer.concat([header, pcm]));
 }
 
+// 3 ms ramps at both ends so no event starts or stops on a click
 function mixRaw(buf, startSample, out, gain = 1) {
+  const edge = Math.min(132, out.length >> 1);
   for (let i = 0; i < out.length; i++) {
     const idx = startSample + i;
     if (idx >= buf.length) break;
-    buf[idx] += out[i] * gain;
+    buf[idx] += out[i] * gain * Math.min(1, i / edge, (out.length - 1 - i) / edge);
   }
 }
+
+// deterministic white noise: pseudo() turns tonal and gritty at audio rate
+// (seed lives on the function: synthAudio runs before module-level lets below it initialise)
+function noise() { noise.seed = ((noise.seed ?? 1) * 1664525 + 1013904223) >>> 0; return noise.seed / 2147483648 - 1; }
 
 function envAt(i, n, attack, release) {
   const t = i / n;
@@ -789,8 +795,7 @@ function addTick(buf, SR, start, amp) {
   const out = new Float64Array(len);
   let smooth = 0;
   for (let i = 0; i < len; i++) {
-    const raw = pseudo(i * 17.3 + s) * 2 - 1;
-    smooth = smooth * 0.7 + raw * 0.3;
+    smooth = smooth * 0.7 + noise() * 0.3;
     out[i] = smooth * Math.exp(-10 * i / len) * amp;
   }
   mixRaw(buf, s, out);
@@ -814,12 +819,11 @@ function addRiser(buf, SR, start, dur) {
   if (start < 0) return;
   const len = Math.round(dur * SR), s = Math.round(start * SR);
   const out = new Float64Array(len);
-  let smooth = 1;
+  let smooth = 0;
   for (let i = 0; i < len; i++) {
     const p = i / len;
-    const raw = pseudo(i * 29.3 + s) * 2 - 1;
-    smooth = smooth * (0.96 - 0.004 * p) + raw * (1 - smooth); // brightens as it climbs
-    out[i] = smooth * p * p * 0.5;
+    smooth += (noise() - smooth) * (0.02 + 0.1 * p * p); // low-pass opens gently as it climbs
+    out[i] = smooth * p * p * 0.9 * Math.min(1, (1 - p) / 0.04); // quick fade, not a hard cut
   }
   mixRaw(buf, s, out);
 }
@@ -834,7 +838,7 @@ function addSub(buf, SR, start, durFall = 1.2) {
     out[i] = Math.sin(2 * Math.PI * hz * i / SR) * Math.exp(-3 * p) * 0.6;
   }
   // soft click transient
-  for (let i = 0; i < 400 && i < len; i++) out[i] += (pseudo(i) * 2 - 1) * 0.2 * Math.exp(-40 * i / 400);
+  for (let i = 0; i < 400 && i < len; i++) out[i] += noise() * 0.1 * Math.exp(-40 * i / 400);
   mixRaw(buf, s, out);
 }
 
