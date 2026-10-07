@@ -22,8 +22,31 @@ const TEASER_MP4 = join(ROOT, 'media', 'teaser.mp4');
 
 // soundtrack
 const SR = 48000;
-const TENSE_CHORDS = [[0, 3, 7, 12], [-4, 0, 3, 8], [-7, -4, 0, 5], [-5, -1, 2, 7]];           // Dm, Bb, Gm, A
-const CALM_CHORDS = [[0, 4, 7, 12], [-7, -3, 0, 5], [-3, 0, 4, 9], [-5, -1, 2, 7]];             // D, G, Bm, A
+// Every pair gets its own bar: the key climbs twice (D, E, F sharp) and tempo, drums, bass line,
+// transition and melody all change, so no two problems or solutions sound alike.
+const KEY_OF = [0, 0, 0, 2, 2, 2, 4, 4, 4];
+const TEMPO = [172, 172, 176, 168, 150, 172, 176, 178, 182];
+const MINOR = { i: [0, 3, 7, 12], VI: [-4, 0, 3, 8], iv: [-7, -4, 0, 5], V: [-5, -1, 2, 7] };
+const MAJOR = { I: [0, 4, 7, 12], ii: [2, 5, 9, 14], IV: [-7, -3, 0, 5], V: [-5, -1, 2, 7], vi: [-3, 0, 4, 9] };
+const TENSE_SEQ = ['i', 'VI', 'iv', 'V', 'i', 'VI', 'iv', 'V', 'V'].map((name) => MINOR[name]);
+const CALM_SEQ = ['I', 'IV', 'vi', 'I', 'ii', 'IV', 'vi', 'V', 'I', 'IV'].map((name) => MAJOR[name]); // last one is the summary
+const _ = null; // a rest
+const KICKS = [[0, 4], [0, 3, 6], [0, 4, 7], [0, 2, 4, 6], [0, 5], [0, 3, 4, 7], [0, 4], [0, 3, 6, 7], [0, 2, 4, 6]];
+const BASSLINES = [  // semitones above the chord root, one per eighth note
+  [0, 0, 0, 0, 0, 0, 0, 0], [0, _, 0, 0, _, 0, 0, _], [0, 0, 12, 0, 0, 12, 0, 7], [0, 12, 0, 12, 0, 12, 0, 12], [0, _, _, 0, _, _, 0, _],
+  [0, 0, 7, 7, 5, 5, 7, 7], [0, 12, 7, 12, 0, 12, 7, 12], [0, 0, 0, 3, 0, 0, 7, 5], [0, 7, 12, 7, 0, 7, 12, 15],
+];
+const TICKS = [      // which chord tone the high pluck plays, one per eighth note
+  [_, _, _, _, _, _, 2, _], [3, _, _, 3, _, _, 2, _], [_, 2, _, _, 3, _, _, 1], [3, _, 2, _, 1, _, 2, _], [_, _, _, 3, _, _, _, _],
+  [2, _, 3, _, _, 2, _, 3], [3, 2, _, 3, 2, _, 3, _], [_, 3, _, 3, _, 3, 2, 1], [3, 3, _, 2, 3, _, 1, 2],
+];
+const MELODY = [     // one phrase per solution, in the key, one note per eighth note
+  [4, _, 7, _, 9, _, 7, _, 4, _, _], [9, _, 7, _, 4, _, 2, _, 4, _, _], [4, 7, _, 9, _, 12, _, 9, 7, _, _],
+  [12, _, 9, _, 7, 9, _, 4, _, 7, _], [2, _, 4, _, 7, _, _, 9, _, 7, _], [7, 9, 12, _, 9, _, 7, _, 4, _, _],
+  [4, _, _, 7, 9, _, 12, _, 14, _, _], [14, _, 12, _, 9, _, 7, 9, _, 12, _], [12, 14, 16, _, 14, 12, _, 16, _, 19, _],
+  [4, _, 7, _, 9, _, 12, _, 9, _, 7, _, 4, _, 7, _, 12, _, _, _],
+];
+const ARPS = [[0, 1, 2, 3, 2, 1], [3, 2, 1, 0, 1, 2], [0, 2, 1, 3, 2, 1]];
 const hzOf = (semi, octave = 0) => 146.83 * Math.pow(2, semi / 12 + octave); // semitones from D3
 
 // palettes
@@ -451,9 +474,10 @@ if (!AUDIO_ONLY) {
 // ---------- soundtrack ----------
 
 // ponytail: every sound is synthesised here; swap for recorded music if the film ever needs studio treatment.
-// Shape: each problem runs fast in D minor (kick, muted bass, hats, a ticking pluck, a riser into the cut).
-// Each solution lands on a sub-drop and a chime, then settles into slow plucked arpeggios in D major.
-// The close builds into a bell on COMING SOON.
+// Shape: a ticking clock and heartbeat for the hook. Each problem runs fast and minor (kick, snare, bass,
+// hats, a high pluck); each solution answers in the major with its own phrase of one long tune.
+// The key steps up every three pairs and the later fixes keep a pulse, so it builds to the close,
+// which rises into a bell on COMING SOON.
 // Stereo, with a small room reverb so the sines do not sound dry.
 
 function synthAudio(path, durationSeconds) {
@@ -461,54 +485,80 @@ function synthAudio(path, durationSeconds) {
   const bus = { left: new Float64Array(n), right: new Float64Array(n), send: new Float64Array(n) };
 
   let t0 = 0;
-  let tense = 0;
-  let calm = 0;
-  let before = '';
   for (const scene of scenes) {
     const m = scene.music;
     const dur = scene.seconds;
-    if (m.kind === 'tense') {
-      const chord = TENSE_CHORDS[tense++ % TENSE_CHORDS.length];
-      const beat = 60 / m.bpm;
-      chord.slice(0, 3).forEach((semi, i) => pad(bus, t0, dur + 0.4, hzOf(semi), 0.045, i - 1));
-      for (let k = 0, at = t0; at < t0 + dur - 0.05; k++, at += beat / 2) {
-        bass(bus, at, hzOf(chord[0], -1), (k % 2 ? 0.07 : 0.12) * m.intensity, 0.16);
-        if (k % 4 === 0) kick(bus, at, 0.3 * m.intensity);
-        if (k % 2 === 1) hat(bus, at, 0.035 * m.intensity, k % 4 === 1 ? -0.35 : 0.35);
-        if (k % 8 === 6) pluck(bus, at, hzOf(chord[2], 2), 0.05 * m.intensity, 0.5, 0.5); // the clock, ticking
+    if (scene.name === 'hook') {
+      // 9 PM: a clock, a slow heartbeat and one held chord, before anything else starts
+      MINOR.i.slice(0, 3).forEach((semi, i) => pad(bus, t0, dur + 0.4, hzOf(semi), 0.045, i - 1));
+      for (let at = 0; at < dur - 0.2; at += 0.5) pluck(bus, t0 + at, hzOf(at % 1 ? 7 : 12, 2), 0.04, at % 1 ? 0.4 : -0.4, 0.5);
+      for (let at = 0; at < dur - 1; at += 1.5) { kick(bus, t0 + at, 0.3); kick(bus, t0 + at + 0.24, 0.18); }
+      riser(bus, t0 + dur - m.riser, m.riser, 0.14);
+    } else if (m.kind === 'tense') {
+      const i = scene.index;
+      const key = KEY_OF[i];
+      const chord = TENSE_SEQ[i];
+      const step = 30 / TEMPO[i];
+      const level = i === 4 ? 0.6 : 0.7 + i * 0.03; // pair five drops back before the last climb
+      chord.slice(0, 3).forEach((semi, n) => pad(bus, t0, dur + 0.4, hzOf(semi + key), 0.045, n - 1));
+      kick(bus, t0, 0.36);
+      for (let k = 0, at = t0; at < t0 + dur - 0.05; k++, at += step) {
+        const low = BASSLINES[i][k % 8];
+        const high = TICKS[i][k % 8];
+        if (low !== _) bass(bus, at, hzOf(chord[0] + low + key, -1), (k % 2 ? 0.08 : 0.12) * level, 0.15);
+        if (KICKS[i].includes(k % 8)) kick(bus, at, 0.3 * level);
+        if (i >= 2 && k % 8 === 4) snare(bus, at, 0.12 * level);
+        if (i >= 1 && i !== 4 && k % 2 === 1) hat(bus, at, 0.035 * level, k % 4 === 1 ? -0.35 : 0.35);
+        if (i >= 5) hat(bus, at + step / 2, 0.02 * level, 0.2);
+        if (high !== _) pluck(bus, at, hzOf(chord[high] + key, 2), 0.045 * level, 0.5, 0.5);
       }
-      riser(bus, t0 + dur - m.riser, m.riser, 0.2 * m.intensity);
-      if (t0 > 0) kick(bus, t0, 0.36);
+      // three different ways into the fix, in rotation
+      if (i % 3 === 0) riser(bus, t0 + dur - 1.3, 1.3, 0.2 * level);
+      else if (i % 3 === 1) roll(bus, t0 + dur - 1.0, 1.0, 0.05 * level);
+      else { glide(bus, t0 + dur - 1.2, 1.2, hzOf(chord[0] + key, -1), 0.14 * level); riser(bus, t0 + dur - 0.8, 0.8, 0.1 * level); }
     } else if (m.kind === 'calm') {
-      const chord = CALM_CHORDS[calm++ % CALM_CHORDS.length];
-      const beat = 60 / m.bpm;
-      chord.forEach((semi, i) => pad(bus, t0, dur + 0.6, hzOf(semi), 0.036, i / 1.5 - 1));
-      bass(bus, t0, hzOf(chord[0], -1), 0.13, dur * 0.5);
-      if (before === 'tense') sub(bus, t0); // the fix arrives
-      bell(bus, t0 + 0.05, hzOf(chord[2], 2), 0.06, 0.2);
-      const order = [0, 1, 2, 3, 2, 1];
-      for (let k = 0, at = t0; at < t0 + dur - 0.1; k++, at += beat / 2) {
-        pluck(bus, at, hzOf(chord[order[k % order.length]], 1), k % 2 ? 0.05 : 0.07, k % 2 ? 0.4 : -0.4, 0.45);
+      const i = scene.index ?? PAIRS.length; // the summary scene comes after the last pair
+      const key = KEY_OF[Math.min(i, PAIRS.length - 1)];
+      const chord = CALM_SEQ[i];
+      const step = 30 / (92 + i);
+      chord.forEach((semi, n) => pad(bus, t0, dur + 0.6, hzOf(semi + key), 0.036, n / 1.5 - 1));
+      bass(bus, t0, hzOf(chord[0] + key, -1), 0.13, dur * 0.5);
+      if (i % 3 === 0) sub(bus, t0); // only some fixes land with a drop
+      // the tune: a new phrase each time, on a different instrument
+      MELODY[i].forEach((semi, k) => {
+        if (semi === _) return;
+        const at = t0 + k * step;
+        const hz = hzOf(semi + key, 1);
+        if (i % 3 === 0) { pluck(bus, at, hz, 0.08, -0.2, 0.5); pluck(bus, at + step * 1.5, hz, 0.03, 0.5, 0.6); }
+        else if (i % 3 === 1) { pluck(bus, at, hz * 2, 0.045, 0.2, 0.5); bell(bus, at, hz * 2, 0.022, -0.3); }
+        else { pluck(bus, at, hz, 0.06, -0.3, 0.5); pluck(bus, at, hz * 2, 0.03, 0.3, 0.6); }
+      });
+      // underneath: rolling arpeggio on even pairs, chord on the beat on odd ones
+      for (let k = 0, at = t0; at < t0 + dur - 0.1; k++, at += step) {
+        if (i % 2 === 0) pluck(bus, at, hzOf(chord[ARPS[(i / 2) % ARPS.length][k % 6]] + key), 0.04, k % 2 ? 0.5 : -0.5, 0.45);
+        else if (k % 2 === 0) chord.slice(0, 3).forEach((semi, n) => pluck(bus, at, hzOf(semi + key), 0.028, n - 1, 0.4));
+        if (i >= 5 && k % 4 === 0) kick(bus, at, 0.15);   // later fixes keep a pulse, so the film builds
+        if (i >= 7 && k % 2 === 1) hat(bus, at, 0.018, k % 4 === 1 ? -0.3 : 0.3);
       }
     } else {
-      // close: hold D major, rise into the bell where COMING SOON pops, then let it ring
+      // close: hold the home chord, rise into the bell where COMING SOON pops, then let it ring
+      const key = KEY_OF[PAIRS.length - 1];
       const hit = t0 + 2.0;
-      const beat = 60 / m.bpm;
-      [0, 7, 12, 16, 19].forEach((semi, i) => pad(bus, t0, dur + 1.2, hzOf(semi), 0.036, i / 2 - 1));
-      bass(bus, t0, hzOf(0, -1), 0.14, 1.5);
+      const step = 30 / m.bpm;
+      [0, 7, 12, 16, 19].forEach((semi, i) => pad(bus, t0, dur + 1.2, hzOf(semi + key), 0.036, i / 2 - 1));
+      bass(bus, t0, hzOf(key, -1), 0.14, 1.5);
       riser(bus, t0 + 0.3, 1.7, 0.18);
       kick(bus, hit, 0.4);
       sub(bus, hit);
-      bass(bus, hit, hzOf(0, -1), 0.16, dur * 0.4);
-      bell(bus, hit, hzOf(12, 1), 0.11, -0.2);
-      bell(bus, hit + 0.02, hzOf(7, 1), 0.07, 0.3);
-      const climb = [0, 4, 7, 12, 16, 12, 7, 4];
-      for (let k = 0, at = hit + beat / 2; at < t0 + dur - 2.2; k++, at += beat / 2) {
-        pluck(bus, at, hzOf(climb[k % climb.length], 1), 0.06, k % 2 ? 0.45 : -0.45, 0.5);
+      bass(bus, hit, hzOf(key, -1), 0.16, dur * 0.4);
+      bell(bus, hit, hzOf(12 + key, 1), 0.11, -0.2);
+      bell(bus, hit + 0.02, hzOf(7 + key, 1), 0.07, 0.3);
+      const climb = [0, 4, 7, 12, 16, 12, 7, 4, 2, 7, 9, 14, 16, 12, 9, 7];
+      for (let k = 0, at = hit + step; at < t0 + dur - 2.2; k++, at += step) {
+        pluck(bus, at, hzOf(climb[k % climb.length] + key, 1), 0.06, k % 2 ? 0.45 : -0.45, 0.5);
       }
-      bell(bus, t0 + dur - 2.4, hzOf(12, 1), 0.08, 0);
+      bell(bus, t0 + dur - 2.4, hzOf(12 + key, 1), 0.08, 0);
     }
-    before = m.kind;
     t0 += dur;
   }
 
@@ -528,7 +578,7 @@ function synthAudio(path, durationSeconds) {
   });
 
   // master: one level for the whole film, a soft knee instead of clipping, fades at both ends
-  const gain = 0.105 / Math.sqrt(sum / (2 * n));
+  const gain = 0.092 / Math.sqrt(sum / (2 * n));
   const end = Math.round(durationSeconds * SR);
   const pcm = Buffer.alloc(end * 4);
   for (let i = 0; i < end; i++) {
@@ -636,6 +686,40 @@ function kick(bus, start, amp) {
     out[i] = Math.sin(phase) * Math.exp(-t / 0.11) * amp;
   }
   mix(bus, start, out, 0, 0.04);
+}
+
+// snare: a short tone with a burst of noise on top
+function snare(bus, start, amp) {
+  const len = Math.round(0.16 * SR);
+  const out = new Float64Array(len);
+  let low = 0;
+  for (let i = 0; i < len; i++) {
+    const t = i / SR;
+    const x = noise();
+    low += (x - low) * 0.45;
+    out[i] = (low * Math.exp(-t / 0.045) + 0.5 * Math.sin(2 * Math.PI * 190 * t) * Math.exp(-t / 0.03)) * amp;
+  }
+  mix(bus, start, out, 0.1, 0.2);
+}
+
+// hat roll: hits that get closer together and louder into the cut
+function roll(bus, start, dur, amp) {
+  for (let at = 0, gap = 0.11; at < dur; at += gap, gap = Math.max(0.035, gap * 0.9)) {
+    hat(bus, start + at, amp * (0.3 + 0.7 * at / dur), at % 0.2 > 0.1 ? 0.3 : -0.3);
+  }
+}
+
+// glide: a bass note that slides up an octave into the cut
+function glide(bus, start, dur, hz, amp) {
+  const len = Math.round(dur * SR);
+  const out = new Float64Array(len);
+  let phase = 0;
+  for (let i = 0; i < len; i++) {
+    const p = i / len;
+    phase += 2 * Math.PI * hz * Math.pow(2, p) / SR;
+    out[i] = (Math.sin(phase) + 0.3 * Math.sin(2 * phase)) * p * amp * Math.min(1, (1 - p) / 0.05);
+  }
+  mix(bus, start, out, 0, 0.15);
 }
 
 // closed hi-hat: a short burst of high-passed noise
