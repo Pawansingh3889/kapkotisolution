@@ -1,9 +1,8 @@
 // Renders the Kapkoti Solution homepage film frame by frame and encodes it with ffmpeg.
 // Every frame is drawn in code: no stock footage, no video editor.
-// Structure: problem act (high BPM, suspense, rising curve) -> silence -> sub-drop ->
-// solution act (low BPM, calm) -> exciting build into "COMING SOON". Single window, text-driven.
-// Story follows the homepage: a small business owner's evening, then the solutions the site lists.
-// Usage: pnpm video  (needs ffmpeg on PATH)
+// Structure: a hook, then nine problem and solution pairs covering a business end to end
+// (problems fast and tense, solutions calm), a summary of the whole chain, and "COMING SOON".
+// Usage: pnpm video  (needs ffmpeg on PATH). Add --audio-only to redo just the soundtrack.
 import { createCanvas, GlobalFonts } from '@napi-rs/canvas';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -16,9 +15,16 @@ const FPS = 30;
 const W = 1600;   // logical design size; rendered at W*SS, then scaled to 1080p
 const H = 900;
 const SS = 1.5;   // supersample factor
+const AUDIO_ONLY = process.argv.includes('--audio-only'); // reuse the last video render, redo only the sound
 const FRAMES_DIR = join(ROOT, '.cache', 'frames');
 const OUT_MP4 = join(ROOT, 'media', 'workflow.mp4');
 const TEASER_MP4 = join(ROOT, 'media', 'teaser.mp4');
+
+// soundtrack
+const SR = 48000;
+const TENSE_CHORDS = [[0, 3, 7, 12], [-4, 0, 3, 8], [-7, -4, 0, 5], [-5, -1, 2, 7]];           // Dm, Bb, Gm, A
+const CALM_CHORDS = [[0, 4, 7, 12], [-7, -3, 0, 5], [-3, 0, 4, 9], [-5, -1, 2, 7]];             // D, G, Bm, A
+const hzOf = (semi, octave = 0) => 146.83 * Math.pow(2, semi / 12 + octave); // semitones from D3
 
 // palettes
 const INK = '#0a0a0b';      // site black
@@ -35,50 +41,44 @@ for (const font of ['/System/Library/Fonts/Supplemental/Georgia.ttf', '/System/L
   try { GlobalFonts.registerFromPath(font); } catch { /* fall back to default sans */ }
 }
 
-// bpm is the marketing: problems run fast, solutions run calm, and the curve keeps changing
-const MUSIC = {
-  hook:    { kind: 'tense', bpm: 176, intensity: 0.60, riser: 1.8 },
-  billing: { kind: 'tense', bpm: 170, intensity: 0.75, riser: 2.0 },
-  stock:   { kind: 'tense', bpm: 168, intensity: 0.85, riser: 2.2 },
-  chase:   { kind: 'tense', bpm: 178, intensity: 0.95, riser: 2.6 },
-  turn:    { kind: 'turn',  riser: 4.2 },
-  reveal:  { kind: 'calm',  bpm: 92,  intensity: 0.50 },
-  invoice: { kind: 'calm',  bpm: 94,  intensity: 0.55 },
-  data:    { kind: 'calm',  bpm: 96,  intensity: 0.60 },
-  flow:    { kind: 'calm',  bpm: 92,  intensity: 0.60 },
-  build:   { kind: 'calm',  bpm: 90,  intensity: 0.55 },
-  close:   { kind: 'close', bpm: 108, intensity: 0.70, riser: 3.0 },
-};
+// Format: one problem, then its solution, across the whole business from first order to last report.
+// Each problem shows three messy things; each solution folds them into one.
+const PAIRS = [
+  { key: 'ORDERS',   problem: 'Orders arrive everywhere.', mess: ['WhatsApp', 'phone call', 'paper slip'], pain: 'And one always gets missed.',
+    solution: 'Every order, logged once.', fix: 'one order list', gain: 'from the first message to delivery.' },
+  { key: 'STOCK',    problem: 'Stock lives in three places.', mess: ['notebook', 'Excel', 'memory'], pain: 'Nobody knows what is really on the shelf.',
+    solution: 'One live stock count.', fix: 'stock, in sync', gain: 'updated with every sale and every purchase.' },
+  { key: 'PURCHASE', problem: 'Reordering by guesswork.', mess: ['too much', 'too late', 'wrong item'], pain: 'Cash stuck on the shelf, or an empty one.',
+    solution: 'Reorder before you run out.', fix: 'low stock alert', gain: 'purchases tracked against what actually sells.' },
+  { key: 'BILLING',  problem: 'Bills typed by hand.', mess: ['type', 'check', 'retype'], pain: 'One wrong HSN code and the return comes back.',
+    solution: 'Invoices that check themselves.', fix: 'GST ready', gain: 'GSTIN, HSN and e-invoice details checked as you bill.' },
+  { key: 'PAYMENTS', problem: 'Chase, remind, wait.', mess: ['payment pending', 'resend invoice', 'call me back'], pain: 'The owner becomes the clerk.',
+    solution: 'Reminders send themselves.', fix: 'paid, thank you', gain: 'follow-ups on schedule, without the awkward calls.' },
+  { key: 'PAYROLL',  problem: 'Salaries worked out by hand.', mess: ['attendance', 'advances', 'overtime'], pain: 'Payday turns into a day of arguments.',
+    solution: 'Payroll that adds itself up.', fix: 'salaries ready', gain: 'attendance, leave, advances and overtime, counted for you.' },
+  { key: 'BOOKS',    problem: 'Month end, a shoebox of bills.', mess: ['paper bills', 'bank statement', 'receipts'], pain: 'All typed in again for the accountant.',
+    solution: 'Books that keep themselves.', fix: 'ledgers up to date', gain: 'bills and bank entries flow straight into the books.' },
+  { key: 'TAX',      problem: 'Due dates sneak up.', mess: ['GST', 'TDS', 'returns'], pain: 'Late fees, just for being busy.',
+    solution: 'Ready for your CA.', fix: 'GSTR-1 exported', gain: 'return data and due dates, prepared ahead.' },
+  { key: 'REPORTS',  problem: 'Running the business blind.', mess: ['what sold?', 'who owes?', 'what is left?'], pain: 'The answers are buried in spreadsheets.',
+    solution: 'Ask in plain words.', fix: 'What sold best this week?', gain: 'governed AI answers from your own live data.' },
+];
 
-const CAM = {
-  hook:    { z0: 1.06, z1: 1.0 },
-  billing: { z0: 1.0,  z1: 1.06 },
-  stock:   { z0: 1.05, z1: 1.0 },
-  chase:   { z0: 1.0,  z1: 1.07 },
-  turn:    { z0: 1.08, z1: 1.0 },
-  reveal:  { z0: 1.0,  z1: 1.05 },
-  invoice: { z0: 1.04, z1: 1.0 },
-  data:    { z0: 1.0,  z1: 1.05 },
-  flow:    { z0: 1.04, z1: 1.0 },
-  build:   { z0: 1.0,  z1: 1.06 },
-  close:   { z0: 1.0,  z1: 1.05 },
-};
-
+// bpm is the marketing: problems run fast, solutions run calm, and the tension rises pair by pair
+// flash: white-out at the end of a problem, into its solution
 const scenes = [
-  { name: 'hook',    seconds: 6, draw: drawHook },
-  { name: 'billing', seconds: 7, draw: drawBilling },
-  { name: 'stock',   seconds: 7, draw: drawStock },
-  { name: 'chase',   seconds: 7, draw: drawChase },
-  { name: 'turn',    seconds: 5, draw: drawTurn },
-  { name: 'reveal',  seconds: 5, draw: drawReveal },
-  { name: 'invoice', seconds: 7, draw: drawInvoice },
-  { name: 'data',    seconds: 7, draw: drawData },
-  { name: 'flow',    seconds: 7, draw: drawFlow },
-  { name: 'build',   seconds: 8, draw: drawBuild },
-  { name: 'close',   seconds: 9, draw: drawClose },
-].map(s => ({ ...s, music: MUSIC[s.name], cam: CAM[s.name] }));
+  { name: 'hook', seconds: 6, draw: drawHook, music: { kind: 'tense', bpm: 172, intensity: 0.6, riser: 1.8 }, cam: { z0: 1.06, z1: 1.0 } },
+  ...PAIRS.flatMap((pair, index) => [
+    { name: `problem ${pair.key}`, seconds: 3, draw: drawProblem, pair, index, flash: true,
+      music: { kind: 'tense', bpm: 172, intensity: 0.65 + index * 0.04, riser: 1.3 }, cam: { z0: 1.0, z1: 1.05 } },
+    { name: `solution ${pair.key}`, seconds: 3.5, draw: drawSolution, pair, index,
+      music: { kind: 'calm', bpm: 96 }, cam: { z0: 1.04, z1: 1.0 } },
+  ]),
+  { name: 'chain', seconds: 6, draw: drawChain, music: { kind: 'calm', bpm: 92 }, cam: { z0: 1.0, z1: 1.05 } },
+  { name: 'close', seconds: 9, draw: drawClose, music: { kind: 'close', bpm: 108 }, cam: { z0: 1.0, z1: 1.05 } },
+];
 
-const totalSeconds = scenes.reduce((sum, s) => sum + s.seconds, 0);   // 75s
+const totalSeconds = scenes.reduce((sum, s) => sum + s.seconds, 0);   // 79.5s
 const totalFrames = totalSeconds * FPS;
 
 // ---------- helpers ----------
@@ -201,330 +201,123 @@ function drawHook(ctx, scene, t, frameIndex) {
   grain(ctx, frameIndex, true);
 }
 
-// billing: TYPE > CHECK > RETYPE > FILE, then the GST mismatch stamp
-function drawBilling(ctx, scene, t, frameIndex) {
+// problem: three messy things jitter on a dark stage, with the pain spelled out in red
+function drawProblem(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
+  const { pair, index } = scene;
   suspenseBG(ctx, t, true);
-  headline(ctx, 'bills, typed by hand.', H * 0.2, 50, withAlpha(CREAM, 0.85), clamp01((t - 0.3 / S) / 0.3));
-  const steps = ['TYPE.', 'CHECK.', 'RETYPE.', 'FILE.'];
-  steps.forEach((s, i) => {
-    const p = pop(t, (1.2 + i * 0.85) / S, 0.3);
+  chip(ctx, `PROBLEM ${index + 1} OF ${PAIRS.length}`, BAD_RED, '#ffffff', clamp01(t * 10));
+  headline(ctx, pair.problem, H * 0.25, 64, CREAM, clamp01(t * 6));
+  pair.mess.forEach((label, k) => {
+    const p = pop(t, (0.35 + k * 0.3) / S, 0.12);
     if (p <= 0) return;
-    ctx.globalAlpha = Math.min(1, p);
-    ctx.fillStyle = i === 3 ? BAD_RED : CREAM;
-    ctx.font = '800 58px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(s, W * 0.5 + (i - 1.5) * 340, H * 0.38);
-    ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.translate(W / 2 + (k - 1) * 350 + Math.sin(frameIndex * 0.9 + k * 2) * 5, H * 0.48 + Math.cos(frameIndex * 0.7 + k) * 5);
+    ctx.rotate((k - 1) * 0.07 + Math.sin(frameIndex * 0.5 + k) * 0.03);
+    ctx.scale(p, p);
+    card(ctx, -150, -60, 300, 120, '#e4e4e7', 14);
+    ctx.fillStyle = BAD_RED; ctx.beginPath(); ctx.arc(126, -36, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = INK; ctx.font = '700 28px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(label, 0, 12);
+    ctx.restore();
   });
-  const sp = pop(t, 4.3 / S, 0.35);
-  if (sp > 0) {
-    ctx.globalAlpha = Math.min(1, sp);
-    card(ctx, W * 0.5 - 380, H * 0.5, 760, 82, '#e4e4e7', 12);
-    ctx.fillStyle = INK; ctx.font = '600 26px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('one wrong HSN code and the return comes back', W / 2, H * 0.5 + 51);
-    ctx.globalAlpha = 1;
-    stamp(ctx, W * 0.5, H * 0.5 + 142, 'GST MISMATCH', Math.min(1, sp));
-  }
-  const st = pop(t, 5.6 / S, 0.4);
-  if (st > 0) subline(ctx, 'The return bounces. The evening is gone.', H * 0.86, 30, BAD_RED, Math.min(1, st));
+  const p2 = pop(t, 1.5 / S, 0.15);
+  if (p2 > 0) subline(ctx, pair.pain, H * 0.71, 32, BAD_RED, Math.min(1, p2));
+  chain(ctx, index, false, true);
   grain(ctx, frameIndex, true);
 }
 
-// stock: the same numbers kept in three places that never agree
-function drawStock(ctx, scene, t, frameIndex) {
+// solution: the three messy things fold into one tidy card on a light stage
+function drawSolution(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
-  suspenseBG(ctx, t, true);
-  const p1 = pop(t, 0.4 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'stock, kept in three places.', H * 0.18, 50, CREAM, Math.min(1, p1));
-  const places = ['NOTEBOOK', 'EXCEL', 'WHATSAPP'];
-  places.forEach((place, i) => {
-    const p = pop(t, (1.1 + i * 0.8) / S, 0.35);
-    if (p <= 0) return;
-    const x = W * 0.5 - 490 + i * 340, y = H * 0.3;
-    ctx.globalAlpha = Math.min(1, p);
-    card(ctx, x, y, 300, 250, '#e4e4e7', 12);
-    ctx.fillStyle = INK; ctx.font = '700 26px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(place, x + 24, y + 44);
-    for (let k = 0; k < 5; k++) {
-      ctx.fillStyle = withAlpha(INK, 0.3);
-      ctx.fillRect(x + 24, y + 70 + k * 32, 240, 10);
-    }
-    // someone typing: row highlights flicker
-    if (t > (1.5 + i * 0.8) / S && pseudo(frameIndex * 3.1 + i) > 0.4) {
-      ctx.fillStyle = withAlpha(BAD_RED, 0.55);
-      ctx.fillRect(x + 24 + pseudo(frameIndex + i) * 200, y + 70 + (frameIndex % 5) * 32, 26, 10);
+  const { pair, index } = scene;
+  ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
+  chip(ctx, `SOLUTION ${index + 1}`, GOOD, INK, 1);
+  headline(ctx, pair.solution, H * 0.25, 64, INK, clamp01(t * 8));
+  const fold = ease(clamp01(t / (0.7 / S)));
+  if (fold < 1) {
+    for (let k = 0; k < 3; k++) {
+      ctx.globalAlpha = 1 - fold;
+      card(ctx, W / 2 + (k - 1) * 350 * (1 - fold) - 150, H * 0.48 - 60, 300, 120, '#e4e4e7', 14);
     }
     ctx.globalAlpha = 1;
-  });
-  const sp = pop(t, 4.2 / S, 0.35);
-  if (sp > 0) stamp(ctx, W * 0.5, H * 0.7, 'NO MATCH', Math.min(1, sp));
-  const p2 = pop(t, 5.5 / S, 0.45);
-  if (p2 > 0) subline(ctx, 'Nobody knows what is really on the shelf.', H * 0.86, 30, BAD_RED, Math.min(1, p2));
-  grain(ctx, frameIndex, true);
-}
-
-// chase: payments and orders followed up by hand, one message at a time
-function drawChase(ctx, scene, t, frameIndex) {
-  const S = scene.seconds;
-  suspenseBG(ctx, t, true);
-  const p1 = pop(t, 0.4 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'chase, remind, wait.', H * 0.2, 62, CREAM, Math.min(1, p1));
-  // buzzing phone right
-  ctx.save();
-  const shake = t > 0.2 ? Math.sin(t * 40) * 2 : 0;
-  ctx.translate(W * 0.74 + shake, H * 0.54);
-  ctx.fillStyle = CREAM; ctx.beginPath(); ctx.roundRect(-70, -150, 140, 300, 24); ctx.fill();
-  ctx.fillStyle = PROB_BG; ctx.beginPath(); ctx.roundRect(-56, -124, 112, 248, 14); ctx.fill();
-  const msgs = ['payment pending', 'resend the invoice', 'which order was it?', 'call me back'];
-  msgs.forEach((msg, i) => {
-    const p = pop(t, (1.4 + i * 0.8) / S, 0.3);
-    if (p <= 0) return;
-    ctx.fillStyle = BAD_RED;
-    ctx.beginPath(); ctx.roundRect(60, -100 + i * 56, 210, 44, 10); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '600 17px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(msg, 165, -72 + i * 56);
-  });
-  ctx.restore();
-  ['reminder #1', 'reminder #4', 'reminder #9'].forEach((m, i) => {
-    const p = pop(t, (1.8 + i * 0.9) / S, 0.3);
-    if (p <= 0) return;
-    ctx.globalAlpha = Math.min(1, p) * 0.9;
-    ctx.fillStyle = CREAM; ctx.font = '700 32px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(m, W * 0.16, H * 0.42 + i * 70);
-    ctx.globalAlpha = 1;
-  });
-  const p2 = pop(t, 5.4 / S, 0.45);
-  if (p2 > 0) subline(ctx, 'The owner becomes the clerk.', H * 0.86, 32, BAD_RED, Math.min(1, p2));
-  grain(ctx, frameIndex, true);
-}
-
-// the turn: heartbeat slows, near silence, then the white flash
-function drawTurn(ctx, scene, t, frameIndex) {
-  ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, W, H);
-  // three slow heartbeats
-  const beatT = [0.12, 0.42, 0.72];
-  beatT.forEach((b) => {
-    const hb = Math.max(0, 1 - Math.abs(t - b) * 6);
-    if (hb > 0) {
-      const v = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, H * 0.7);
-      v.addColorStop(0, withAlpha(BAD_RED, 0.10 * hb));
-      v.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
-      dot(ctx, W / 2, H * 0.42, 11 + hb * 5);
-    }
-  });
-  const a = clamp01((t - 0.3) / 0.5);
-  headline(ctx, 'The problem was never effort.', H * 0.62, 46, withAlpha(CREAM, 0.9), a);
-  // final 18%: hard flash to white
-  if (t > 0.82) {
-    ctx.fillStyle = `rgba(244,244,245,${ease((t - 0.82) / 0.18)})`;
-    ctx.fillRect(0, 0, W, H);
   }
-  grain(ctx, frameIndex, true);
-}
-
-// reveal: light world, the day's work joins up into one line
-function drawReveal(ctx, scene, t, frameIndex) {
-  const S = scene.seconds;
-  ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
-  const p1 = pop(t, 0.4 / S, 0.4);
-  if (p1 > 0) headline(ctx, 'One place for the day’s work…', H * 0.24, 52, INK, Math.min(1, p1));
-  // line grows left to right, nodes pop
-  const nodes = ['ORDER', 'INVOICE', 'STOCK', 'BOOKS'];
-  const nodesP = pop(t, 1.0 / S, 0.5);
-  if (nodesP > 0) {
-    const x0 = W * 0.18, x1 = W * 0.82, y = H * 0.5;
-    const grow = ease(clamp01((t - 1.0 / S) / 0.5));
-    const line = ctx.createLinearGradient(x0, 0, x1, 0);
-    line.addColorStop(0, EMERALD); line.addColorStop(1, AMBER);
-    ctx.strokeStyle = line; ctx.lineWidth = 8; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(lerp(x0, x1, grow), y); ctx.stroke();
-    ['MORNING', 'CLOSE'].forEach((w, i) => {
-      ctx.fillStyle = withAlpha(INK, 0.55);
-      ctx.font = '700 24px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(w, i === 0 ? x0 : x1, y + 60);
-    });
-    nodes.forEach((n, i) => {
-      const np = pop(t, (1.4 + i * 0.5) / S, 0.3);
-      if (np <= 0) return;
-      const nx = lerp(x0, x1, (i + 0.5) / 4);
-      ctx.globalAlpha = Math.min(1, np);
-      card(ctx, nx - 78, y - 34, 156, 68, INK, 34);
-      ctx.fillStyle = CREAM; ctx.font = '700 19px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(n, nx, y + 7);
-      ctx.globalAlpha = 1;
-    });
-    dot(ctx, lerp(x0, x1, clamp01((t - 1.3 / S) / 0.55)), y, 10);
+  const p = pop(t, 0.6 / S, 0.12);
+  if (p > 0) {
+    ctx.save();
+    ctx.translate(W / 2, H * 0.48);
+    ctx.scale(p, p);
+    card(ctx, -300, -62, 600, 124, INK, 62);
+    ctx.fillStyle = GOOD; ctx.beginPath(); ctx.arc(-238, 0, 34, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(-253, 1); ctx.lineTo(-242, 13); ctx.lineTo(-222, -12); ctx.stroke(); // tick, drawn: no tofu
+    ctx.fillStyle = CREAM; ctx.font = '700 30px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(pair.fix, 34, 11);
+    ctx.restore();
   }
-  const p2 = pop(t, 3.6 / S, 0.45);
-  if (p2 > 0) subline(ctx, '…is what Kapkoti Solution builds.', H * 0.76, 36, ACCENT, Math.min(1, p2));
+  const p2 = pop(t, 1.3 / S, 0.15);
+  if (p2 > 0) subline(ctx, pair.gain, H * 0.71, 30, withAlpha(INK, 0.7), Math.min(1, p2));
+  chain(ctx, index, true, false);
   grain(ctx, frameIndex, false);
 }
 
-// invoice: billed from a phone, checked before it reaches the portal
-function drawInvoice(ctx, scene, t, frameIndex) {
+// summary: the whole chain, lit from the first order to the last report
+function drawChain(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
-  const p1 = pop(t, 0.3 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'Invoices that check themselves.', H * 0.18, 50, INK, Math.min(1, p1));
-  // phone slides up from bottom right
-  const up = ease(clamp01((t - 0.6 / S) / 0.4));
-  ctx.save();
-  ctx.translate(W * 0.72, lerp(H + 260, H * 0.58, up));
-  ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(-110, -200, 220, 400, 34); ctx.fill();
-  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(-94, -170, 188, 340, 20); ctx.fill();
-  card(ctx, -75, -150, 150, 46, INK, 23);
-  ctx.fillStyle = CREAM; ctx.font = '600 16px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('Tax invoice', 0, -121);
-  // invoice rows
-  for (let k = 0; k < 3; k++) {
-    ctx.fillStyle = withAlpha(INK, 0.14); ctx.beginPath(); ctx.roundRect(-75, -84 + k * 22, 150 - k * 28, 10, 5); ctx.fill();
-  }
-  // checking progress
-  const prog = clamp01((t - 1.6 / S) / (2.2 / S));
-  ctx.fillStyle = withAlpha(INK, 0.15); ctx.beginPath(); ctx.roundRect(-75, 2, 150, 16, 8); ctx.fill();
-  ctx.fillStyle = GOOD; ctx.beginPath(); ctx.roundRect(-75, 2, 150 * prog, 16, 8); ctx.fill();
-  ctx.fillStyle = INK; ctx.font = '600 19px Avenir Next, Arial, sans-serif';
-  ctx.fillText(`${Math.round(prog * 100)}% checked`, 0, 50);
-  const rp = pop(t, 4.2 / S, 0.3);
-  if (rp > 0) {
-    ctx.globalAlpha = Math.min(1, rp);
-    card(ctx, -75, 76, 150, 44, GOOD, 22);
-    ctx.fillStyle = INK; ctx.font = '700 16px Avenir Next, Arial, sans-serif';
-    ctx.fillText('GST ready', 0, 104);
-    ctx.globalAlpha = 1;
-  }
-  ctx.restore();
-  // copy left
-  const lines = [
-    { text: 'Billed from your phone,', y: 0, delay: 1.4, big: true },
-    { text: 'right the first time.', y: 46, delay: 1.4, big: true },
-    { text: 'GSTIN and HSN checked as you type', y: 130, delay: 2.8 },
-    { text: 'e-invoice and e-way bill details together', y: 186, delay: 3.6 },
-    { text: 'GSTR-1 export ready for your CA', y: 242, delay: 4.4 },
-  ];
-  lines.forEach((line) => {
-    const p = pop(t, line.delay / S, 0.4);
-    if (p <= 0) return;
-    ctx.globalAlpha = Math.min(1, p);
-    ctx.textAlign = 'left';
-    if (line.big) {
-      ctx.fillStyle = INK; ctx.font = '700 38px Avenir Next, Arial, sans-serif';
-      ctx.fillText(line.text, W * 0.09, H * 0.42 + line.y);
-    } else {
-      dot(ctx, W * 0.09 + 8, H * 0.42 + line.y - 8, 6, GOOD);
-      ctx.fillStyle = withAlpha(INK, 0.7); ctx.font = '600 26px Avenir Next, Arial, sans-serif';
-      ctx.fillText(line.text, W * 0.09 + 34, H * 0.42 + line.y);
-    }
-    ctx.globalAlpha = 1;
+  const p0 = pop(t, 0.3 / S, 0.3);
+  if (p0 > 0) headline(ctx, 'End to end. One system.', H * 0.26, 72, INK, Math.min(1, p0));
+  const x0 = W * 0.09, x1 = W * 0.91, y = H * 0.52;
+  const grow = ease(clamp01((t - 0.9 / S) / (2.6 / S)));
+  ctx.strokeStyle = GOOD; ctx.lineWidth = 8; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(lerp(x0, x1, grow), y); ctx.stroke();
+  PAIRS.forEach((pair, i) => {
+    const np = pop(t, (0.9 + i * 0.3) / S, 0.1);
+    if (np <= 0) return;
+    const nx = lerp(x0, x1, i / (PAIRS.length - 1));
+    ctx.save(); ctx.translate(nx, y); ctx.scale(np, np);
+    card(ctx, -74, -30, 148, 60, INK, 30);
+    ctx.fillStyle = CREAM; ctx.font = '700 17px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(pair.key, 0, 6);
+    ctx.restore();
   });
+  dot(ctx, lerp(x0, x1, grow), y - 52, 10);
+  const p2 = pop(t, 3.6 / S, 0.2);
+  if (p2 > 0) subline(ctx, 'From the first order to the last report.', H * 0.72, 36, ACCENT, Math.min(1, p2));
+  const p3 = pop(t, 4.4 / S, 0.2);
+  if (p3 > 0) subline(ctx, 'built around how small and medium businesses really work.', H * 0.8, 26, withAlpha(INK, 0.6), Math.min(1, p3));
   grain(ctx, frameIndex, false);
 }
 
-// data: a plain question typed in, an answer drawn back, with governed access
-function drawData(ctx, scene, t, frameIndex) {
-  const S = scene.seconds;
-  ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
-  const p1 = pop(t, 0.3 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'Ask your data. In plain words.', H * 0.18, 50, INK, Math.min(1, p1));
-  const left = W * 0.5 - 400;
-  // question box, typed one letter at a time
-  card(ctx, left, H * 0.27, 800, 84, '#ffffff', 16);
-  const question = 'What sold best this week?';
-  const typed = question.slice(0, Math.round(question.length * clamp01((t - 0.9 / S) / (1.6 / S))));
-  ctx.fillStyle = INK; ctx.font = '600 30px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText(typed, left + 30, H * 0.27 + 53);
-  if (typed.length < question.length && frameIndex % 20 < 10) {
-    ctx.fillRect(left + 34 + ctx.measureText(typed).width, H * 0.27 + 26, 3, 34);
-  }
-  // answer bars grow in
-  const rows = [['Rice 25 kg', 1], ['Cooking oil', 0.76], ['Tea', 0.52], ['Sugar', 0.38]];
-  rows.forEach(([label, share], i) => {
-    const p = clamp01((t - (2.9 + i * 0.35) / S) / (0.9 / S));
-    if (p <= 0) return;
-    const y = H * 0.45 + i * 62;
-    ctx.globalAlpha = Math.min(1, p * 3);
-    ctx.fillStyle = withAlpha(INK, 0.75); ctx.font = '600 24px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(label, left, y + 22);
-    const bar = ctx.createLinearGradient(left + 200, 0, left + 800, 0);
-    bar.addColorStop(0, EMERALD); bar.addColorStop(1, AMBER);
-    ctx.fillStyle = bar;
-    ctx.beginPath(); ctx.roundRect(left + 200, y, 600 * share * ease(p), 30, 8); ctx.fill();
-    ctx.globalAlpha = 1;
-  });
-  const p2 = pop(t, 5.4 / S, 0.4);
-  if (p2 > 0) subline(ctx, 'Governed AI: only the access it needs, and a trail you can check.', H * 0.86, 28, ACCENT, Math.min(1, p2));
-  grain(ctx, frameIndex, false);
+// corner chip naming the scene
+function chip(ctx, text, fill, ink, alpha) {
+  ctx.globalAlpha = alpha;
+  card(ctx, 60, 52, 250, 46, fill, 23);
+  ctx.fillStyle = ink; ctx.font = '700 20px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(text, 185, 82);
+  ctx.globalAlpha = 1;
 }
 
-// flow: the repetitive steps run on their own, people keep the decisions
-function drawFlow(ctx, scene, t, frameIndex) {
-  const S = scene.seconds;
-  ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
-  const p1 = pop(t, 0.3 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'The repetitive part runs by itself.', H * 0.18, 50, INK, Math.min(1, p1));
-  const cardsArr = [['ORDER IN', 'logged once'], ['INVOICE', 'sent, GST ready'], ['REMINDER', 'scheduled']];
-  cardsArr.forEach(([h, s], i) => {
-    const p = pop(t, (1.1 + i * 0.8) / S, 0.35);
-    if (p <= 0) return;
-    const x = W * 0.5 - 425 + i * 300, y = H * 0.36;
-    ctx.globalAlpha = Math.min(1, p);
-    card(ctx, x, y, 250, 150, i === 2 ? INK : '#ffffff', 14);
-    ctx.fillStyle = i === 2 ? CREAM : INK;
-    ctx.font = '700 26px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(h, x + 24, y + 56);
-    ctx.font = '500 19px Avenir Next, Arial, sans-serif';
-    ctx.fillStyle = i === 2 ? withAlpha(CREAM, 0.8) : withAlpha(INK, 0.65);
-    ctx.fillText(s, x + 24, y + 92);
-    ctx.globalAlpha = 1;
-    if (i < 2) dot(ctx, x + 275, y + 75, 8, GOOD);
-  });
-  const ep = pop(t, 4.0 / S, 0.35);
-  if (ep > 0) {
-    ctx.globalAlpha = Math.min(1, ep);
-    const chip = ctx.createLinearGradient(W * 0.5 - 230, 0, W * 0.5 + 230, 0);
-    chip.addColorStop(0, EMERALD); chip.addColorStop(1, AMBER);
-    card(ctx, W * 0.5 - 230, H * 0.63, 460, 60, chip, 30);
-    ctx.fillStyle = INK; ctx.font = '700 22px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('AI helps. You decide.', W / 2, H * 0.63 + 38);
-    ctx.globalAlpha = 1;
+// progress strip: where this pair sits in the business, and how much is already fixed
+function chain(ctx, index, solved, dark) {
+  const x0 = W * 0.1, x1 = W * 0.9, y = H * 0.89;
+  const ink = dark ? CREAM : INK;
+  const done = solved ? index : index - 1;
+  ctx.strokeStyle = withAlpha(ink, 0.2); ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+  if (done >= 0) {
+    ctx.strokeStyle = GOOD;
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(lerp(x0, x1, done / (PAIRS.length - 1)), y); ctx.stroke();
   }
-  const p2 = pop(t, 5.3 / S, 0.4);
-  if (p2 > 0) subline(ctx, 'no copy and paste, no chasing, no month-end surprises.', H * 0.84, 28, withAlpha(INK, 0.65), Math.min(1, p2));
-  grain(ctx, frameIndex, false);
-}
-
-// build: the solutions listed on the homepage, calm and plain
-function drawBuild(ctx, scene, t, frameIndex) {
-  const S = scene.seconds;
-  ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
-  const p0 = pop(t, 0.3 / S, 0.4);
-  if (p0 > 0) headline(ctx, 'What we build.', H * 0.18, 62, INK, Math.min(1, p0));
-  const rows = [
-    ['ERP & inventory', 'one system for the business'],
-    ['E-invoicing & GST', 'right the first time'],
-    ['Accounts & CA', 'less typing, cleaner books'],
-    ['Data & governed AI', 'answers you can check'],
-  ];
-  rows.forEach(([big, small], i) => {
-    const p = pop(t, (1.1 + i * 1.0) / S, 0.4);
-    if (p <= 0) return;
-    const y = H * 0.36 + i * 100;
-    ctx.globalAlpha = Math.min(1, p);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = INK;
-    ctx.font = '800 44px Avenir Next, Arial, sans-serif';
-    ctx.fillText(big, W * 0.16, y);
-    ctx.fillStyle = ACCENT;
-    ctx.font = '600 30px Avenir Next, Arial, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(small, W * 0.84, y);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = withAlpha(INK, 0.25); ctx.fillRect(W * 0.16, y + 22, W * 0.68, 1);
+  PAIRS.forEach((pair, i) => {
+    const x = lerp(x0, x1, i / (PAIRS.length - 1));
+    const current = i === index;
+    ctx.fillStyle = i <= done ? GOOD : current ? BAD_RED : (dark ? '#3a2a2a' : '#d4d4d8');
+    ctx.beginPath(); ctx.arc(x, y, current ? 13 : 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = withAlpha(ink, current ? 1 : 0.5);
+    ctx.font = `${current ? 700 : 600} 16px Avenir Next, Arial, sans-serif`; ctx.textAlign = 'center';
+    ctx.fillText(pair.key, x, y + 38);
   });
-  const p2 = pop(t, 5.8 / S, 0.4);
-  if (p2 > 0) subline(ctx, 'built around how small and medium businesses really work.', H * 0.88, 26, withAlpha(INK, 0.6), Math.min(1, p2));
-  grain(ctx, frameIndex, false);
 }
 
 // close: site black, brand mark, then COMING SOON in the site gradient
@@ -581,54 +374,59 @@ function drawClose(ctx, scene, t, frameIndex) {
 mkdirSync(FRAMES_DIR, { recursive: true });
 mkdirSync(dirname(OUT_MP4), { recursive: true });
 
-console.log(`Rendering ${totalFrames} frames (${totalSeconds}s @ ${FPS}fps, ${W * SS}x${H * SS})…`);
-const canvas = createCanvas(W * SS, H * SS);
-const ctx = canvas.getContext('2d');
-ctx.scale(SS, SS);
-let frame = 0;
-for (const scene of scenes) {
-  const count = scene.seconds * FPS;
-  for (let i = 0; i < count; i++) {
-    const t = i / count;
-    ctx.save();
-    applyCamera(ctx, scene, t);
-    scene.draw(ctx, scene, t, frame);
-    ctx.restore();
-    writeFileSync(join(FRAMES_DIR, `f${String(frame).padStart(5, '0')}.png`), canvas.toBuffer('image/png'));
-    frame++;
-  }
-  console.log(`  ${scene.name} done (${frame}/${totalFrames})`);
-}
-
-console.log('Encoding video with ffmpeg…');
 const SILENT_MP4 = join(ROOT, '.cache', 'video-silent.mp4');
-execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(FRAMES_DIR, 'f%05d.png'),
-  '-vf', `scale=1920:1080:flags=lanczos`,
-  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-preset', 'slow', '-movflags', '+faststart', SILENT_MP4]);
-
-// teaser: 6-second montage cut from the film's best moments (muted hero loop)
-console.log('Cutting teaser…');
-const TEASER_FRAMES = join(ROOT, '.cache', 'teaser');
-mkdirSync(TEASER_FRAMES, { recursive: true });
-let teaserCount = 0;
-const take = (fromS, toS) => {
-  for (let f = Math.round(fromS * FPS); f < Math.round(toS * FPS); f++) {
-    const src = join(FRAMES_DIR, `f${String(f).padStart(5, '0')}.png`);
-    const dst = join(TEASER_FRAMES, `t${String(teaserCount).padStart(5, '0')}.png`);
-    execFileSync('cp', [src, dst]);
-    teaserCount++;
+if (!AUDIO_ONLY) {
+  console.log(`Rendering ${totalFrames} frames (${totalSeconds}s @ ${FPS}fps, ${W * SS}x${H * SS})…`);
+  const canvas = createCanvas(W * SS, H * SS);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(SS, SS);
+  let frame = 0;
+  for (const scene of scenes) {
+    const count = scene.seconds * FPS;
+    for (let i = 0; i < count; i++) {
+      const t = i / count;
+      ctx.save();
+      applyCamera(ctx, scene, t);
+      scene.draw(ctx, scene, t, frame);
+      ctx.restore();
+      if (scene.flash && t > 0.9) {
+        ctx.fillStyle = `rgba(244,244,245,${ease((t - 0.9) / 0.1)})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+      writeFileSync(join(FRAMES_DIR, `f${String(frame).padStart(5, '0')}.png`), canvas.toBuffer('image/png'));
+      frame++;
+    }
+    console.log(`  ${scene.name} done (${frame}/${totalFrames})`);
   }
-};
-// scene starts: hook 0, billing 6, stock 13, chase 20, turn 27, reveal 32,
-//               invoice 37, data 44, flow 51, build 58, close 66 (end 75)
-take(1.5, 2.7);    // hook: dot lands, title
-take(10.4, 11.6);  // billing: the mismatch stamp
-take(31.4, 32.6);  // turn: white flash
-take(47.4, 48.6);  // data: answer bars grow
-take(69.4, 70.6);  // close: COMING SOON pop
-execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(TEASER_FRAMES, 't%05d.png'),
-  '-vf', 'scale=1920:1080:flags=lanczos',
-  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-preset', 'slow', '-movflags', '+faststart', TEASER_MP4]);
+
+  console.log('Encoding video with ffmpeg…');
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(FRAMES_DIR, 'f%05d.png'),
+    '-vf', `scale=1920:1080:flags=lanczos`,
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-preset', 'slow', '-movflags', '+faststart', SILENT_MP4]);
+
+  // teaser: 6-second montage cut from the film's best moments (muted hero loop)
+  console.log('Cutting teaser…');
+  const TEASER_FRAMES = join(ROOT, '.cache', 'teaser');
+  mkdirSync(TEASER_FRAMES, { recursive: true });
+  let teaserCount = 0;
+  const take = (fromS, toS) => {
+    for (let f = Math.round(fromS * FPS); f < Math.round(toS * FPS); f++) {
+      const src = join(FRAMES_DIR, `f${String(f).padStart(5, '0')}.png`);
+      const dst = join(TEASER_FRAMES, `t${String(teaserCount).padStart(5, '0')}.png`);
+      execFileSync('cp', [src, dst]);
+      teaserCount++;
+    }
+  };
+  // hook 0 to 6; pair i starts at 6 + 6.5i (problem 3s, solution 3.5s); chain 64.5; close 70.5 (end 79.5)
+  take(1.5, 2.7);    // hook: dot lands, title
+  take(8.4, 9.6);    // orders: flash into the first solution
+  take(26.9, 28.1);  // billing: problem cards
+  take(66.5, 67.7);  // chain: end to end
+  take(72.9, 74.1);  // close: COMING SOON pop
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(TEASER_FRAMES, 't%05d.png'),
+    '-vf', 'scale=1920:1080:flags=lanczos',
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-preset', 'slow', '-movflags', '+faststart', TEASER_MP4]);
+}
 
 console.log('Synthesising soundtrack…');
 const AUDIO_WAV = join(ROOT, '.cache', 'audio.wav');
@@ -636,107 +434,136 @@ synthAudio(AUDIO_WAV, totalSeconds);
 
 console.log('Muxing sound…');
 execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', SILENT_MP4, '-i', AUDIO_WAV,
-  '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', OUT_MP4]);
+  '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', OUT_MP4]);
 console.log(`Wrote ${OUT_MP4}`);
 
-// poster: the COMING SOON frame reads best as a still
-const canvas2 = createCanvas(W * SS, H * SS);
-const ctx2 = canvas2.getContext('2d');
-ctx2.scale(SS, SS);
-const closeScene = scenes.find(s => s.name === 'close');
-ctx2.save(); applyCamera(ctx2, closeScene, 0.55); closeScene.draw(ctx2, closeScene, 0.75, 0); ctx2.restore();
-writeFileSync(join(ROOT, '.cache', 'poster.png'), canvas2.toBuffer('image/png'));
-execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', join(ROOT, '.cache', 'poster.png'), '-q:v', '2', join(ROOT, 'media', 'poster.jpg')]);
+if (!AUDIO_ONLY) {
+  // poster: the COMING SOON frame reads best as a still
+  const canvas2 = createCanvas(W * SS, H * SS);
+  const ctx2 = canvas2.getContext('2d');
+  ctx2.scale(SS, SS);
+  const closeScene = scenes.find(s => s.name === 'close');
+  ctx2.save(); applyCamera(ctx2, closeScene, 0.55); closeScene.draw(ctx2, closeScene, 0.75, 0); ctx2.restore();
+  writeFileSync(join(ROOT, '.cache', 'poster.png'), canvas2.toBuffer('image/png'));
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', join(ROOT, '.cache', 'poster.png'), '-q:v', '2', join(ROOT, 'media', 'poster.jpg')]);
+}
 
 // ---------- soundtrack ----------
 
-// ponytail: single-pass additive synthesis; swap if the film ever needs studio treatment.
-// Curve: every scene carries its own BPM and tension, so hits land exactly on scene boundaries.
-// Problems = high BPM + ticks + risers. Turn = riser, silence, sub-drop. Calm = slow pads.
-// Close = exciting build back up into a final bell.
-function synthAudio(path, durationSeconds) {
-  const SR = 44100;
-  const n = Math.ceil((durationSeconds + 2) * SR);
-  const buf = new Float64Array(n);
+// ponytail: every sound is synthesised here; swap for recorded music if the film ever needs studio treatment.
+// Shape: each problem runs fast in D minor (kick, muted bass, hats, a ticking pluck, a riser into the cut).
+// Each solution lands on a sub-drop and a chime, then settles into slow plucked arpeggios in D major.
+// The close builds into a bell on COMING SOON.
+// Stereo, with a small room reverb so the sines do not sound dry.
 
-  const chords = {
-    tense: [[0, 3, 7], [-2, 2, 5], [0, 3, 7, 10], [-2, 2, 5, 9], [0, 3, 7]],
-    calm: [[0, 4, 9, 14], [5, 9, 12], [0, 4, 7, 14], [-2, 4, 9]],
-    build: [[0, 4, 7], [5, 9, 12], [9, 12, 16]],
-  };
-  const rootHz = (semi) => 146.83 * Math.pow(2, semi / 12);
-  const pulseHz = (semi) => 73.42 * Math.pow(2, semi / 12);
+function synthAudio(path, durationSeconds) {
+  const n = Math.ceil((durationSeconds + 2) * SR);
+  const bus = { left: new Float64Array(n), right: new Float64Array(n), send: new Float64Array(n) };
 
   let t0 = 0;
-  scenes.forEach((scene, si) => {
+  let tense = 0;
+  let calm = 0;
+  let before = '';
+  for (const scene of scenes) {
     const m = scene.music;
     const dur = scene.seconds;
-    if (m.kind !== 'turn') {
-      const chord = (m.kind === 'calm' ? chords.calm : chords.tense)[si % (m.kind === 'calm' ? chords.calm.length : chords.tense.length)];
-      const padAmp = m.kind === 'calm' ? 0.035 : 0.05;
-      for (const semi of chord) {
-        addPad(buf, SR, t0, dur + 0.5, rootHz(semi), padAmp);
-        addPad(buf, SR, t0, dur + 0.6, rootHz(semi) * 2.002, padAmp * 0.5);
-      }
+    if (m.kind === 'tense') {
+      const chord = TENSE_CHORDS[tense++ % TENSE_CHORDS.length];
       const beat = 60 / m.bpm;
-      if (m.kind === 'tense') {
-        // driving 8th-note pulse, accents on the beat; curve changes with this scene's bpm
-        for (let p = t0; p < t0 + dur; p += beat / 2) {
-          const isBeat = Math.abs((p - t0) / beat - Math.round((p - t0) / beat)) < 0.01;
-          addPulse(buf, SR, p, pulseHz(chord[0]), (isBeat ? 0.15 : 0.08) * m.intensity);
-        }
-        // suspense offbeat ticks
-        for (let p = t0 + beat / 4; p < t0 + dur; p += beat / 2) addTick(buf, SR, p, 0.05 * m.intensity);
-        // riser into the next scene's downbeat
-        addRiser(buf, SR, t0 + dur - m.riser, m.riser);
-        // impact on this scene's first downbeat (except the very first scene)
-        if (si > 0) addWhump(buf, SR, t0, dur);
-      } else if (m.kind === 'calm') {
-        // slow quarter-note pluck arp on major harmony
-        const notes = [0, 7, 4, 9];
-        for (let p = t0, k = 0; p < t0 + dur; p += beat, k++) {
-          addPluck(buf, SR, p, rootHz(chord[k % chord.length] + 12), 0.03);
-        }
+      chord.slice(0, 3).forEach((semi, i) => pad(bus, t0, dur + 0.4, hzOf(semi), 0.045, i - 1));
+      for (let k = 0, at = t0; at < t0 + dur - 0.05; k++, at += beat / 2) {
+        bass(bus, at, hzOf(chord[0], -1), (k % 2 ? 0.07 : 0.12) * m.intensity, 0.16);
+        if (k % 4 === 0) kick(bus, at, 0.3 * m.intensity);
+        if (k % 2 === 1) hat(bus, at, 0.035 * m.intensity, k % 4 === 1 ? -0.35 : 0.35);
+        if (k % 8 === 6) pluck(bus, at, hzOf(chord[2], 2), 0.05 * m.intensity, 0.5, 0.5); // the clock, ticking
+      }
+      riser(bus, t0 + dur - m.riser, m.riser, 0.2 * m.intensity);
+      if (t0 > 0) kick(bus, t0, 0.36);
+    } else if (m.kind === 'calm') {
+      const chord = CALM_CHORDS[calm++ % CALM_CHORDS.length];
+      const beat = 60 / m.bpm;
+      chord.forEach((semi, i) => pad(bus, t0, dur + 0.6, hzOf(semi), 0.036, i / 1.5 - 1));
+      bass(bus, t0, hzOf(chord[0], -1), 0.13, dur * 0.5);
+      if (before === 'tense') sub(bus, t0); // the fix arrives
+      bell(bus, t0 + 0.05, hzOf(chord[2], 2), 0.06, 0.2);
+      const order = [0, 1, 2, 3, 2, 1];
+      for (let k = 0, at = t0; at < t0 + dur - 0.1; k++, at += beat / 2) {
+        pluck(bus, at, hzOf(chord[order[k % order.length]], 1), k % 2 ? 0.05 : 0.07, k % 2 ? 0.4 : -0.4, 0.45);
       }
     } else {
-      // the turn: riser climbs, then air, then the sub-drop on the flash
-      addRiser(buf, SR, t0, m.riser);
-      addSub(buf, SR, t0 + m.riser + 0.35, dur);
+      // close: hold D major, rise into the bell where COMING SOON pops, then let it ring
+      const hit = t0 + 2.0;
+      const beat = 60 / m.bpm;
+      [0, 7, 12, 16, 19].forEach((semi, i) => pad(bus, t0, dur + 1.2, hzOf(semi), 0.036, i / 2 - 1));
+      bass(bus, t0, hzOf(0, -1), 0.14, 1.5);
+      riser(bus, t0 + 0.3, 1.7, 0.18);
+      kick(bus, hit, 0.4);
+      sub(bus, hit);
+      bass(bus, hit, hzOf(0, -1), 0.16, dur * 0.4);
+      bell(bus, hit, hzOf(12, 1), 0.11, -0.2);
+      bell(bus, hit + 0.02, hzOf(7, 1), 0.07, 0.3);
+      const climb = [0, 4, 7, 12, 16, 12, 7, 4];
+      for (let k = 0, at = hit + beat / 2; at < t0 + dur - 2.2; k++, at += beat / 2) {
+        pluck(bus, at, hzOf(climb[k % climb.length], 1), 0.06, k % 2 ? 0.45 : -0.45, 0.5);
+      }
+      bell(bus, t0 + dur - 2.4, hzOf(12, 1), 0.08, 0);
     }
+    before = m.kind;
     t0 += dur;
+  }
+
+  // room: the send bus through a small stereo reverb
+  const wetLeft = reverb(bus.send, [0.0297, 0.0371, 0.0411, 0.0437]);
+  const wetRight = reverb(bus.send, [0.0304, 0.0378, 0.0418, 0.0444]);
+  let low = [0, 0];
+  let sum = 0;
+  const channels = [bus.left, bus.right];
+  [wetLeft, wetRight].forEach((wet, c) => {
+    for (let i = 0; i < n; i++) {
+      const v = channels[c][i] + wet[i] * 0.3;
+      low[c] += (v - low[c]) * 0.004;  // one-pole high-pass at about 30 Hz: no rumble, no DC
+      channels[c][i] = v - low[c];
+      sum += channels[c][i] * channels[c][i];
+    }
   });
 
-  // final bell inside the close
-  let closeStart = 0;
-  for (const s of scenes) { if (s.name === 'close') break; closeStart += s.seconds; }
-  addBell(buf, SR, closeStart + 4.2, rootHz(24), 0.09);
-  addRiser(buf, SR, closeStart + 1.0, 3.0); // build into the bell
-
-  mkdirSync(join(ROOT, '.cache'), { recursive: true });
-  let peak = 0;
-  for (const v of buf) peak = Math.max(peak, Math.abs(v));
-  const g = peak > 0 ? 0.89 / peak : 1;   // linear headroom, no saturation
-  const pcm = Buffer.alloc(n * 2);
-  for (let i = 0; i < n; i++) {
-    const v = buf[i] * g;
-    pcm.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v * 32767))), i * 2);
+  // master: one level for the whole film, a soft knee instead of clipping, fades at both ends
+  const gain = 0.105 / Math.sqrt(sum / (2 * n));
+  const end = Math.round(durationSeconds * SR);
+  const pcm = Buffer.alloc(end * 4);
+  for (let i = 0; i < end; i++) {
+    const fade = Math.min(1, i / (0.25 * SR), (end - 1 - i) / (1.5 * SR));
+    channels.forEach((channel, c) => {
+      const v = channel[i] * gain * fade;
+      const a = Math.abs(v);
+      const soft = a < 0.7 ? v : Math.sign(v) * (0.7 + 0.28 * Math.tanh((a - 0.7) / 0.28));
+      pcm.writeInt16LE(Math.round(soft * 32767), i * 4 + c * 2);
+    });
   }
   const header = Buffer.alloc(44);
   header.write('RIFF', 0); header.writeUInt32LE(36 + pcm.length, 4); header.write('WAVE', 8);
   header.write('fmt ', 12); header.writeUInt32LE(16, 16); header.writeUInt16LE(1, 20);
-  header.writeUInt16LE(1, 22); header.writeUInt32LE(SR, 24); header.writeUInt32LE(SR * 2, 28);
-  header.writeUInt16LE(2, 32); header.writeUInt16LE(16, 34);
+  header.writeUInt16LE(2, 22); header.writeUInt32LE(SR, 24); header.writeUInt32LE(SR * 4, 28);
+  header.writeUInt16LE(4, 32); header.writeUInt16LE(16, 34);
   header.write('data', 36); header.writeUInt32LE(pcm.length, 40);
+  mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, Buffer.concat([header, pcm]));
 }
 
-// 3 ms ramps at both ends so no event starts or stops on a click
-function mixRaw(buf, startSample, out, gain = 1) {
-  const edge = Math.min(132, out.length >> 1);
-  for (let i = 0; i < out.length; i++) {
-    const idx = startSample + i;
-    if (idx >= buf.length) break;
-    buf[idx] += out[i] * gain * Math.min(1, i / edge, (out.length - 1 - i) / edge);
+// Adds one mono sound to the stereo mix and the reverb send.
+// 3 ms ramps at both ends so no event starts or stops on a click.
+function mix(bus, start, out, pan = 0, send = 0.25) {
+  const s = Math.round(start * SR);
+  if (s < 0) return;
+  const edge = Math.min(144, out.length >> 1);
+  const angle = (Math.max(-1, Math.min(1, pan)) + 1) * Math.PI / 4;
+  const l = Math.cos(angle) * Math.SQRT2;
+  const r = Math.sin(angle) * Math.SQRT2;
+  for (let i = 0; i < out.length && s + i < bus.left.length; i++) {
+    const v = out[i] * Math.min(1, i / edge, (out.length - 1 - i) / edge);
+    bus.left[s + i] += v * l;
+    bus.right[s + i] += v * r;
+    bus.send[s + i] += v * send;
   }
 }
 
@@ -744,111 +571,135 @@ function mixRaw(buf, startSample, out, gain = 1) {
 // (seed lives on the function: synthAudio runs before module-level lets below it initialise)
 function noise() { noise.seed = ((noise.seed ?? 1) * 1664525 + 1013904223) >>> 0; return noise.seed / 2147483648 - 1; }
 
-function envAt(i, n, attack, release) {
-  const t = i / n;
-  if (t < attack) return t / attack;
-  if (t > 1 - release) return (1 - t) / release;
-  return 1;
+// four damped comb filters into two all-pass stages: a small, soft room
+function reverb(input, delays) {
+  const out = new Float64Array(input.length);
+  for (const seconds of delays) {
+    const line = new Float64Array(Math.round(seconds * SR));
+    let at = 0;
+    let damp = 0;
+    for (let i = 0; i < input.length; i++) {
+      const y = line[at];
+      damp += (y - damp) * 0.55;
+      line[at] = input[i] + damp * 0.8;
+      out[i] += y * 0.25;
+      at = (at + 1) % line.length;
+    }
+  }
+  for (const seconds of [0.005, 0.0017]) {
+    const line = new Float64Array(Math.round(seconds * SR));
+    let at = 0;
+    for (let i = 0; i < out.length; i++) {
+      const y = line[at];
+      line[at] = out[i] + y * 0.5;
+      out[i] = y - out[i];
+      at = (at + 1) % line.length;
+    }
+  }
+  return out;
 }
 
-function addPad(buf, SR, start, dur, hz, amp) {
-  const s = Math.max(0, Math.round(start * SR)), len = Math.round(dur * SR);
+// warm sustained note: three soft harmonics, slow swell, gentle tremolo
+function pad(bus, start, dur, hz, amp, pan = 0) {
+  const len = Math.round(dur * SR);
+  const out = new Float64Array(len);
+  const attack = Math.min(0.9, dur * 0.3) * SR;
+  const release = Math.min(1.4, dur * 0.35) * SR;
+  const tune = hz * (1 + pan * 0.002); // left and right sit a hair apart, which reads as width
+  for (let i = 0; i < len; i++) {
+    const w = 2 * Math.PI * tune * i / SR;
+    const env = Math.min(1, i / attack, (len - i) / release);
+    out[i] = (Math.sin(w) + 0.3 * Math.sin(2 * w) + 0.1 * Math.sin(3 * w)) * env * env * amp * (1 + 0.08 * Math.sin(2 * Math.PI * 0.25 * i / SR));
+  }
+  mix(bus, start, out, pan * 0.7, 0.35);
+}
+
+// round bass note: short and muted in the evening, long in the morning
+function bass(bus, start, hz, amp, decay) {
+  const len = Math.round(Math.min(6, decay * 5) * SR);
   const out = new Float64Array(len);
   for (let i = 0; i < len; i++) {
-    const e = envAt(i, len, 0.3, 0.4);
-    out[i] = (Math.sin(2 * Math.PI * hz * i / SR) + 0.5 * Math.sin(2 * Math.PI * hz * 1.003 * i / SR)) * e * amp;
+    const w = 2 * Math.PI * hz * i / SR;
+    out[i] = (Math.sin(w) + 0.3 * Math.sin(2 * w)) * Math.min(1, i / (0.008 * SR)) * Math.exp(-i / (decay * SR)) * amp;
   }
-  mixRaw(buf, s, out);
+  mix(bus, start, out, 0, 0.05);
 }
 
-function addPulse(buf, SR, start, hz, amp) {
-  const dur = 0.22, len = Math.round(dur * SR), s = Math.round(start * SR);
-  if (s < 0) return;
+// kick drum: a sine that drops from 120 Hz to 45 Hz
+function kick(bus, start, amp) {
+  const len = Math.round(0.4 * SR);
+  const out = new Float64Array(len);
+  let phase = 0;
+  for (let i = 0; i < len; i++) {
+    const t = i / SR;
+    phase += 2 * Math.PI * (45 + 75 * Math.exp(-t / 0.03)) / SR;
+    out[i] = Math.sin(phase) * Math.exp(-t / 0.11) * amp;
+  }
+  mix(bus, start, out, 0, 0.04);
+}
+
+// closed hi-hat: a short burst of high-passed noise
+function hat(bus, start, amp, pan) {
+  const len = Math.round(0.06 * SR);
+  const out = new Float64Array(len);
+  let low = 0;
+  for (let i = 0; i < len; i++) {
+    const x = noise();
+    low += (x - low) * 0.3;
+    out[i] = (x - low) * Math.exp(-i / (0.012 * SR)) * amp;
+  }
+  mix(bus, start, out, pan, 0.15);
+}
+
+// marimba-like pluck: higher harmonics die away faster
+function pluck(bus, start, hz, amp, pan, send) {
+  const len = Math.round(1.4 * SR);
   const out = new Float64Array(len);
   for (let i = 0; i < len; i++) {
-    out[i] = Math.sin(2 * Math.PI * hz * i / SR) * Math.exp(-16 * i / len) * amp;
+    const t = i / SR;
+    let v = 0;
+    for (let k = 1; k <= 4; k++) v += Math.sin(2 * Math.PI * hz * k * t) * Math.exp(-t * k / 0.45) / Math.pow(k, 1.6);
+    out[i] = v * Math.min(1, i / (0.003 * SR)) * amp;
   }
-  mixRaw(buf, s, out);
+  mix(bus, start, out, pan, send);
 }
 
-function addPluck(buf, SR, start, hz, amp) {
-  const dur = 0.8, len = Math.round(dur * SR), s = Math.round(start * SR);
-  if (s < 0) return;
+// bell: inharmonic partials with a long tail
+function bell(bus, start, hz, amp, pan) {
+  const len = Math.round(4.5 * SR);
   const out = new Float64Array(len);
+  const partials = [[1, 1, 1.6], [2.76, 0.4, 1.0], [5.4, 0.2, 0.5], [8.93, 0.1, 0.3]];
   for (let i = 0; i < len; i++) {
-    out[i] = Math.sin(2 * Math.PI * hz * i / SR) * Math.exp(-5 * i / len) * amp;
+    const t = i / SR;
+    let v = 0;
+    for (const [ratio, level, tail] of partials) v += Math.sin(2 * Math.PI * hz * ratio * t) * level * Math.exp(-t / tail);
+    out[i] = v * amp;
   }
-  mixRaw(buf, s, out);
+  mix(bus, start, out, pan, 0.6);
 }
 
-function addBell(buf, SR, start, hz, amp) {
-  const dur = 4, len = Math.round(dur * SR), s = Math.round(start * SR);
-  const out = new Float64Array(len);
-  for (let i = 0; i < len; i++) {
-    out[i] = (Math.sin(2 * Math.PI * hz * i / SR) + 0.3 * Math.sin(2 * Math.PI * hz * 2.76 * i / SR)) * Math.exp(-1.6 * i / len) * amp;
-  }
-  mixRaw(buf, s, out);
-}
-
-function addTick(buf, SR, start, amp) {
-  const dur = 0.05, len = Math.round(dur * SR), s = Math.max(0, Math.round(start * SR));
-  const out = new Float64Array(len);
-  let smooth = 0;
-  for (let i = 0; i < len; i++) {
-    smooth = smooth * 0.7 + noise() * 0.3;
-    out[i] = smooth * Math.exp(-10 * i / len) * amp;
-  }
-  mixRaw(buf, s, out);
-}
-
-function addWhoosh(buf, SR, start, dur) {
-  const len = Math.round(dur * SR), s = Math.max(0, Math.round(start * SR));
-  const out = new Float64Array(len);
-  let smooth = 0;
-  for (let i = 0; i < len; i++) {
-    const e = envAt(i, len, 0.5, 0.4);
-    const raw = pseudo(i * 31.7 + s) * 2 - 1;
-    smooth = smooth * 0.94 + raw * 0.06;
-    out[i] = smooth * e * 0.4;
-  }
-  mixRaw(buf, s, out);
-}
-
-// suspense riser: noise that grows and brightens, ends on the next downbeat
-function addRiser(buf, SR, start, dur) {
-  if (start < 0) return;
-  const len = Math.round(dur * SR), s = Math.round(start * SR);
+// riser: noise whose low-pass opens as it climbs, with a quick fade instead of a hard cut
+function riser(bus, start, dur, amp) {
+  const len = Math.round(dur * SR);
   const out = new Float64Array(len);
   let smooth = 0;
   for (let i = 0; i < len; i++) {
     const p = i / len;
-    smooth += (noise() - smooth) * (0.02 + 0.1 * p * p); // low-pass opens gently as it climbs
-    out[i] = smooth * p * p * 0.9 * Math.min(1, (1 - p) / 0.04); // quick fade, not a hard cut
+    smooth += (noise() - smooth) * (0.02 + 0.09 * p * p);
+    out[i] = smooth * p * p * 4 * amp * Math.min(1, (1 - p) / 0.04);
   }
-  mixRaw(buf, s, out);
+  mix(bus, start, out, 0, 0.3);
 }
 
-// big sub-drop for the flash
-function addSub(buf, SR, start, durFall = 1.2) {
-  const len = Math.round(durFall * SR), s = Math.max(0, Math.round(start * SR));
+// sub-drop for the flash and the final hit
+function sub(bus, start) {
+  const len = Math.round(1.4 * SR);
   const out = new Float64Array(len);
+  let phase = 0;
   for (let i = 0; i < len; i++) {
     const p = i / len;
-    const hz = lerp(52, 34, p);
-    out[i] = Math.sin(2 * Math.PI * hz * i / SR) * Math.exp(-3 * p) * 0.6;
+    phase += 2 * Math.PI * lerp(56, 34, p) / SR;
+    out[i] = Math.sin(phase) * Math.exp(-3 * p) * 0.36;
   }
-  // soft click transient
-  for (let i = 0; i < 400 && i < len; i++) out[i] += noise() * 0.1 * Math.exp(-40 * i / 400);
-  mixRaw(buf, s, out);
-}
-
-// low impact thump on each problem-scene downbeat
-function addWhump(buf, SR, start, dur) {
-  const durL = 0.4, len = Math.round(durL * SR), s = Math.round(start * SR);
-  const out = new Float64Array(len);
-  for (let i = 0; i < len; i++) {
-    const p = i / len;
-    out[i] = Math.sin(2 * Math.PI * lerp(60, 38, p) * i / SR) * Math.exp(-8 * p) * 0.35;
-  }
-  mixRaw(buf, s, out);
+  mix(bus, start, out, 0, 0.1);
 }
