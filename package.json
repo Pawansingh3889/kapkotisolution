@@ -4,16 +4,19 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "lint": "eslint worker.js public/app.js tests/*.test.js",
+    "lint": "eslint worker.js public/app.js scene/story.js tests/*.test.js",
     "typecheck": "tsc --noEmit --allowJs --checkJs --strict false --target es2022 --module esnext --lib es2023,dom,dom.iterable worker.js public/app.js",
     "build": "wrangler deploy --dry-run --outdir dist",
     "dev": "wrangler dev",
-    "deploy": "sh scripts/sync-site.sh && wrangler deploy",
-    "video": "node scripts/render-video.mjs"
+    "deploy": "pnpm build:story && sh scripts/sync-site.sh && wrangler deploy",
+    "video": "node scripts/render-video.mjs",
+    "build:story": "esbuild scene/story.js --bundle --minify --format=esm --target=es2022 --outfile=story.js"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^1.0.9",
+    "esbuild": "^0.28.2",
     "eslint": "^10.11.0",
+    "three": "^0.186.1",
     "typescript": "^7.0.2",
     "wrangler": "4.132.0"
   }

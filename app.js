@@ -18,6 +18,14 @@ let submission = null;
 let savedBrief = '';
 $('year').textContent = String(new Date().getFullYear());
 
+// Menu: always open on wide screens (links sit inline there), closes after a tap on phones.
+const menu = element('menu', HTMLDetailsElement);
+const wide = matchMedia('(min-width: 900px)');
+const syncMenu = () => { menu.open = wide.matches; };
+wide.addEventListener('change', syncMenu);
+syncMenu();
+menu.addEventListener('click', (event) => { if (event.target instanceof HTMLAnchorElement && !wide.matches) menu.open = false; });
+
 // Hero headline: deletes the current word, then types the next one. The first
 // word must match the text already in #typed.
 if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
