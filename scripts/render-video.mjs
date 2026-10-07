@@ -22,31 +22,22 @@ const TEASER_MP4 = join(ROOT, 'media', 'teaser.mp4');
 
 // soundtrack
 const SR = 48000;
-// Every pair gets its own bar: the key climbs twice (D, E, F sharp) and tempo, drums, bass line,
-// transition and melody all change, so no two problems or solutions sound alike.
-const KEY_OF = [0, 0, 0, 2, 2, 2, 4, 4, 4];
-const TEMPO = [172, 172, 176, 168, 150, 172, 176, 178, 182];
-const MINOR = { i: [0, 3, 7, 12], VI: [-4, 0, 3, 8], iv: [-7, -4, 0, 5], V: [-5, -1, 2, 7] };
-const MAJOR = { I: [0, 4, 7, 12], ii: [2, 5, 9, 14], IV: [-7, -3, 0, 5], V: [-5, -1, 2, 7], vi: [-3, 0, 4, 9] };
-const TENSE_SEQ = ['i', 'VI', 'iv', 'V', 'i', 'VI', 'iv', 'V', 'V'].map((name) => MINOR[name]);
-const CALM_SEQ = ['I', 'IV', 'vi', 'I', 'ii', 'IV', 'vi', 'V', 'I', 'IV'].map((name) => MAJOR[name]); // last one is the summary
+// One steady bed at 120 bpm from start to finish: same instruments, same pulse, nothing that jumps out.
+// Problems sit on a minor chord with no tune; solutions move to a major chord and a short tune comes in.
+// Scenes are whole beats long (6 and 7), and on-screen pops sit on beats, so picture and sound agree.
+const BEAT = 0.5;
+const CHORDS = { I: [0, 4, 7], ii: [2, 5, 9], IV: [-7, -3, 0], V: [-5, -1, 2], vi: [-3, 0, 4] };
+const ASK_SEQ = ['vi', 'ii', 'vi', 'ii', 'vi', 'ii', 'vi', 'ii', 'IV'].map((name) => CHORDS[name]);
+const ANSWER_SEQ = ['I', 'IV', 'I', 'V', 'IV', 'I', 'IV', 'V', 'I'].map((name) => CHORDS[name]);
 const _ = null; // a rest
-const KICKS = [[0, 4], [0, 3, 6], [0, 4, 7], [0, 2, 4, 6], [0, 5], [0, 3, 4, 7], [0, 4], [0, 3, 6, 7], [0, 2, 4, 6]];
-const BASSLINES = [  // semitones above the chord root, one per eighth note
-  [0, 0, 0, 0, 0, 0, 0, 0], [0, _, 0, 0, _, 0, 0, _], [0, 0, 12, 0, 0, 12, 0, 7], [0, 12, 0, 12, 0, 12, 0, 12], [0, _, _, 0, _, _, 0, _],
-  [0, 0, 7, 7, 5, 5, 7, 7], [0, 12, 7, 12, 0, 12, 7, 12], [0, 0, 0, 3, 0, 0, 7, 5], [0, 7, 12, 7, 0, 7, 12, 15],
-];
-const TICKS = [      // which chord tone the high pluck plays, one per eighth note
-  [_, _, _, _, _, _, 2, _], [3, _, _, 3, _, _, 2, _], [_, 2, _, _, 3, _, _, 1], [3, _, 2, _, 1, _, 2, _], [_, _, _, 3, _, _, _, _],
-  [2, _, 3, _, _, 2, _, 3], [3, 2, _, 3, 2, _, 3, _], [_, 3, _, 3, _, 3, 2, 1], [3, 3, _, 2, 3, _, 1, 2],
-];
-const MELODY = [     // one phrase per solution, in the key, one note per eighth note
-  [4, _, 7, _, 9, _, 7, _, 4, _, _], [9, _, 7, _, 4, _, 2, _, 4, _, _], [4, 7, _, 9, _, 12, _, 9, 7, _, _],
-  [12, _, 9, _, 7, 9, _, 4, _, 7, _], [2, _, 4, _, 7, _, _, 9, _, 7, _], [7, 9, 12, _, 9, _, 7, _, 4, _, _],
-  [4, _, _, 7, 9, _, 12, _, 14, _, _], [14, _, 12, _, 9, _, 7, 9, _, 12, _], [12, 14, 16, _, 14, 12, _, 16, _, 19, _],
-  [4, _, 7, _, 9, _, 12, _, 9, _, 7, _, 4, _, 7, _, 12, _, _, _],
-];
-const ARPS = [[0, 1, 2, 3, 2, 1], [3, 2, 1, 0, 1, 2], [0, 2, 1, 3, 2, 1]];
+const TUNE = {       // one note per half beat; A keeps coming back so it is recognisable
+  A: [4, _, 7, _, 9, _, _, _, 7, _, 4, _, _, _],
+  B: [9, _, 12, _, 9, _, _, _, 7, _, 9, _, _, _],
+  C: [12, _, 9, _, 7, _, _, _, 9, _, 12, _, _, _],
+  D: [4, _, 7, _, 9, _, 12, _, 14, _, 12, _, _, _],
+};
+const TUNE_SEQ = ['A', 'B', 'A', 'C', 'A', 'B', 'A', 'C', 'D'].map((name) => TUNE[name]);
+const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19]; // the summary climbs it, one note per pill
 const hzOf = (semi, octave = 0) => 146.83 * Math.pow(2, semi / 12 + octave); // semitones from D3
 
 // palettes
@@ -87,18 +78,15 @@ const PAIRS = [
     solution: 'Ask in plain words.', fix: 'What sold best this week?', gain: 'governed AI answers from your own live data.' },
 ];
 
-// bpm is the marketing: problems run fast, solutions run calm, and the tension rises pair by pair
 // flash: white-out at the end of a problem, into its solution
 const scenes = [
-  { name: 'hook', seconds: 6, draw: drawHook, music: { kind: 'tense', bpm: 172, intensity: 0.6, riser: 1.8 }, cam: { z0: 1.06, z1: 1.0 } },
+  { name: 'hook', seconds: 6, draw: drawHook, cam: { z0: 1.06, z1: 1.0 } },
   ...PAIRS.flatMap((pair, index) => [
-    { name: `problem ${pair.key}`, seconds: 3, draw: drawProblem, pair, index, flash: true,
-      music: { kind: 'tense', bpm: 172, intensity: 0.65 + index * 0.04, riser: 1.3 }, cam: { z0: 1.0, z1: 1.05 } },
-    { name: `solution ${pair.key}`, seconds: 3.5, draw: drawSolution, pair, index,
-      music: { kind: 'calm', bpm: 96 }, cam: { z0: 1.04, z1: 1.0 } },
+    { name: `problem ${pair.key}`, seconds: 3, draw: drawProblem, pair, index, flash: true, cam: { z0: 1.0, z1: 1.05 } },
+    { name: `solution ${pair.key}`, seconds: 3.5, draw: drawSolution, pair, index, cam: { z0: 1.04, z1: 1.0 } },
   ]),
-  { name: 'chain', seconds: 6, draw: drawChain, music: { kind: 'calm', bpm: 92 }, cam: { z0: 1.0, z1: 1.05 } },
-  { name: 'close', seconds: 9, draw: drawClose, music: { kind: 'close', bpm: 108 }, cam: { z0: 1.0, z1: 1.05 } },
+  { name: 'chain', seconds: 6, draw: drawChain, cam: { z0: 1.0, z1: 1.05 } },
+  { name: 'close', seconds: 9, draw: drawClose, cam: { z0: 1.0, z1: 1.05 } },
 ];
 
 const totalSeconds = scenes.reduce((sum, s) => sum + s.seconds, 0);   // 79.5s
@@ -217,9 +205,9 @@ function drawHook(ctx, scene, t, frameIndex) {
   dot(ctx, W / 2, lerp(-60, H * 0.26, drop));
   const p = pop(t, 1.0 / S, 0.6);
   if (p > 0) headline(ctx, 'IT’S 9 PM.', H * 0.52, 96, CREAM, Math.min(1, p));
-  const p2 = pop(t, 2.2 / S, 0.45);
+  const p2 = pop(t, 2.0 / S, 0.45);
   if (p2 > 0) subline(ctx, 'The shop is closed. The work is not.', H * 0.64, 34, withAlpha(CREAM, 0.75), Math.min(1, p2));
-  const p3 = pop(t, 3.8 / S, 0.4);
+  const p3 = pop(t, 3.5 / S, 0.4);
   if (p3 > 0) subline(ctx, 'A   D A Y   I N   A   S M A L L   B U S I N E S S', H * 0.76, 24, BAD_RED, Math.min(1, p3) * 0.9);
   grain(ctx, frameIndex, true);
 }
@@ -232,7 +220,7 @@ function drawProblem(ctx, scene, t, frameIndex) {
   chip(ctx, `PROBLEM ${index + 1} OF ${PAIRS.length}`, BAD_RED, '#ffffff', clamp01(t * 10));
   headline(ctx, pair.problem, H * 0.25, 64, CREAM, clamp01(t * 6));
   pair.mess.forEach((label, k) => {
-    const p = pop(t, (0.35 + k * 0.3) / S, 0.12);
+    const p = pop(t, (0.5 + k * 0.25) / S, 0.12); // on the beat, half a beat apart
     if (p <= 0) return;
     ctx.save();
     ctx.translate(W / 2 + (k - 1) * 350 + Math.sin(frameIndex * 0.9 + k * 2) * 5, H * 0.48 + Math.cos(frameIndex * 0.7 + k) * 5);
@@ -257,7 +245,7 @@ function drawSolution(ctx, scene, t, frameIndex) {
   ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
   chip(ctx, `SOLUTION ${index + 1}`, GOOD, INK, 1);
   headline(ctx, pair.solution, H * 0.25, 64, INK, clamp01(t * 8));
-  const fold = ease(clamp01(t / (0.7 / S)));
+  const fold = ease(clamp01(t / (0.5 / S)));
   if (fold < 1) {
     for (let k = 0; k < 3; k++) {
       ctx.globalAlpha = 1 - fold;
@@ -265,7 +253,7 @@ function drawSolution(ctx, scene, t, frameIndex) {
     }
     ctx.globalAlpha = 1;
   }
-  const p = pop(t, 0.6 / S, 0.12);
+  const p = pop(t, 0.5 / S, 0.12); // beat 2
   if (p > 0) {
     ctx.save();
     ctx.translate(W / 2, H * 0.48);
@@ -278,7 +266,7 @@ function drawSolution(ctx, scene, t, frameIndex) {
     ctx.fillText(pair.fix, 34, 11);
     ctx.restore();
   }
-  const p2 = pop(t, 1.3 / S, 0.15);
+  const p2 = pop(t, 1.0 / S, 0.15);
   if (p2 > 0) subline(ctx, pair.gain, H * 0.71, 30, withAlpha(INK, 0.7), Math.min(1, p2));
   chain(ctx, index, true, false);
   grain(ctx, frameIndex, false);
@@ -291,11 +279,11 @@ function drawChain(ctx, scene, t, frameIndex) {
   const p0 = pop(t, 0.3 / S, 0.3);
   if (p0 > 0) headline(ctx, 'End to end. One system.', H * 0.26, 72, INK, Math.min(1, p0));
   const x0 = W * 0.09, x1 = W * 0.91, y = H * 0.52;
-  const grow = ease(clamp01((t - 0.9 / S) / (2.6 / S)));
+  const grow = clamp01((t - 0.5 / S) / (2 / S));
   ctx.strokeStyle = GOOD; ctx.lineWidth = 8; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(lerp(x0, x1, grow), y); ctx.stroke();
   PAIRS.forEach((pair, i) => {
-    const np = pop(t, (0.9 + i * 0.3) / S, 0.1);
+    const np = pop(t, (0.5 + i * 0.25) / S, 0.1); // two pills per beat
     if (np <= 0) return;
     const nx = lerp(x0, x1, i / (PAIRS.length - 1));
     ctx.save(); ctx.translate(nx, y); ctx.scale(np, np);
@@ -305,9 +293,9 @@ function drawChain(ctx, scene, t, frameIndex) {
     ctx.restore();
   });
   dot(ctx, lerp(x0, x1, grow), y - 52, 10);
-  const p2 = pop(t, 3.6 / S, 0.2);
+  const p2 = pop(t, 3.0 / S, 0.2);
   if (p2 > 0) subline(ctx, 'From the first order to the last report.', H * 0.72, 36, ACCENT, Math.min(1, p2));
-  const p3 = pop(t, 4.4 / S, 0.2);
+  const p3 = pop(t, 4.0 / S, 0.2);
   if (p3 > 0) subline(ctx, 'built around how small and medium businesses really work.', H * 0.8, 26, withAlpha(INK, 0.6), Math.min(1, p3));
   grain(ctx, frameIndex, false);
 }
@@ -386,8 +374,8 @@ function drawClose(ctx, scene, t, frameIndex) {
       ctx.closePath(); ctx.fill();
     }
   }
-  subline(ctx, 'ERP \u00b7 e-invoicing \u00b7 accounts \u00b7 data \u00b7 automation \u00b7 governed AI', H * 0.8, 26, withAlpha(CREAM, 0.75), a * clamp01((t - 3.8 / S) / 0.4));
-  subline(ctx, 'Tell us what you wish was easier \u00b7 kapkotisolution.com', H * 0.88, 28, AMBER, a * clamp01((t - 4.6 / S) / 0.4));
+  subline(ctx, 'ERP \u00b7 e-invoicing \u00b7 accounts \u00b7 data \u00b7 automation \u00b7 governed AI', H * 0.8, 26, withAlpha(CREAM, 0.75), a * clamp01((t - 3.5 / S) / 0.4));
+  subline(ctx, 'Tell us what you wish was easier \u00b7 kapkotisolution.com', H * 0.88, 28, AMBER, a * clamp01((t - 4.5 / S) / 0.4));
   ctx.globalAlpha = 1;
   grain(ctx, frameIndex, true);
 }
@@ -474,90 +462,70 @@ if (!AUDIO_ONLY) {
 // ---------- soundtrack ----------
 
 // ponytail: every sound is synthesised here; swap for recorded music if the film ever needs studio treatment.
-// Shape: a ticking clock and heartbeat for the hook. Each problem runs fast and minor (kick, snare, bass,
-// hats, a high pluck); each solution answers in the major with its own phrase of one long tune.
-// The key steps up every three pairs and the later fixes keep a pulse, so it builds to the close,
-// which rises into a bell on COMING SOON.
-// Stereo, with a small room reverb so the sines do not sound dry.
+// Shape: what explainer-video sound guides recommend, a steady, simple, clean bed that stays out of the
+// way, with small cues tied to the picture. Soft kick, round bass and warm chords throughout; problems
+// stay on a minor chord, solutions open to a major chord with a short recurring tune.
+// Everything sits near the centre and the top end is rolled off, so it is easy on headphones.
+// Stereo, with a small room reverb so the tones do not sound dry.
 
 function synthAudio(path, durationSeconds) {
   const n = Math.ceil((durationSeconds + 2) * SR);
   const bus = { left: new Float64Array(n), right: new Float64Array(n), send: new Float64Array(n) };
 
+  // the bed: soft kick on every beat, a round bass and warm chords in one dotted rhythm
+  const bed = (start, beats, chord, shaker) => {
+    chord.forEach((semi, n) => pad(bus, start, beats * BEAT + 0.5, hzOf(semi), 0.03, (n - 1) * 0.25));
+    for (let b = 0; b < beats; b++) {
+      kick(bus, start + b * BEAT, 0.15);
+      if (shaker) hat(bus, start + (b + 0.5) * BEAT, 0.012, b % 2 ? 0.2 : -0.2);
+    }
+    for (let b = 0; b < beats; b += 1.5) {
+      bass(bus, start + b * BEAT, hzOf(chord[0] + (b === 3 ? 7 : 0), -1), 0.1, 0.25);
+      chord.forEach((semi, n) => keys(bus, start + b * BEAT, hzOf(semi), 0.028, (n - 1) * 0.2));
+    }
+  };
+  const tune = (start, phrase) => phrase.forEach((semi, k) => {
+    if (semi === _) return;
+    pluck(bus, start + k * BEAT / 2, hzOf(semi, 1), 0.06, -0.1, 0.5);
+    pluck(bus, start + k * BEAT / 2 + BEAT * 0.75, hzOf(semi, 1), 0.016, 0.25, 0.6); // a faint echo
+  });
+
   let t0 = 0;
   for (const scene of scenes) {
-    const m = scene.music;
     const dur = scene.seconds;
     if (scene.name === 'hook') {
-      // 9 PM: a clock, a slow heartbeat and one held chord, before anything else starts
-      MINOR.i.slice(0, 3).forEach((semi, i) => pad(bus, t0, dur + 0.4, hzOf(semi), 0.045, i - 1));
-      for (let at = 0; at < dur - 0.2; at += 0.5) pluck(bus, t0 + at, hzOf(at % 1 ? 7 : 12, 2), 0.04, at % 1 ? 0.4 : -0.4, 0.5);
-      for (let at = 0; at < dur - 1; at += 1.5) { kick(bus, t0 + at, 0.3); kick(bus, t0 + at + 0.24, 0.18); }
-      riser(bus, t0 + dur - m.riser, m.riser, 0.14);
-    } else if (m.kind === 'tense') {
-      const i = scene.index;
-      const key = KEY_OF[i];
-      const chord = TENSE_SEQ[i];
-      const step = 30 / TEMPO[i];
-      const level = i === 4 ? 0.6 : 0.7 + i * 0.03; // pair five drops back before the last climb
-      chord.slice(0, 3).forEach((semi, n) => pad(bus, t0, dur + 0.4, hzOf(semi + key), 0.045, n - 1));
-      kick(bus, t0, 0.36);
-      for (let k = 0, at = t0; at < t0 + dur - 0.05; k++, at += step) {
-        const low = BASSLINES[i][k % 8];
-        const high = TICKS[i][k % 8];
-        if (low !== _) bass(bus, at, hzOf(chord[0] + low + key, -1), (k % 2 ? 0.08 : 0.12) * level, 0.15);
-        if (KICKS[i].includes(k % 8)) kick(bus, at, 0.3 * level);
-        if (i >= 2 && k % 8 === 4) snare(bus, at, 0.12 * level);
-        if (i >= 1 && i !== 4 && k % 2 === 1) hat(bus, at, 0.035 * level, k % 4 === 1 ? -0.35 : 0.35);
-        if (i >= 5) hat(bus, at + step / 2, 0.02 * level, 0.2);
-        if (high !== _) pluck(bus, at, hzOf(chord[high] + key, 2), 0.045 * level, 0.5, 0.5);
-      }
-      // three different ways into the fix, in rotation
-      if (i % 3 === 0) riser(bus, t0 + dur - 1.3, 1.3, 0.2 * level);
-      else if (i % 3 === 1) roll(bus, t0 + dur - 1.0, 1.0, 0.05 * level);
-      else { glide(bus, t0 + dur - 1.2, 1.2, hzOf(chord[0] + key, -1), 0.14 * level); riser(bus, t0 + dur - 0.8, 0.8, 0.1 * level); }
-    } else if (m.kind === 'calm') {
-      const i = scene.index ?? PAIRS.length; // the summary scene comes after the last pair
-      const key = KEY_OF[Math.min(i, PAIRS.length - 1)];
-      const chord = CALM_SEQ[i];
-      const step = 30 / (92 + i);
-      chord.forEach((semi, n) => pad(bus, t0, dur + 0.6, hzOf(semi + key), 0.036, n / 1.5 - 1));
-      bass(bus, t0, hzOf(chord[0] + key, -1), 0.13, dur * 0.5);
-      if (i % 3 === 0) sub(bus, t0); // only some fixes land with a drop
-      // the tune: a new phrase each time, on a different instrument
-      MELODY[i].forEach((semi, k) => {
-        if (semi === _) return;
-        const at = t0 + k * step;
-        const hz = hzOf(semi + key, 1);
-        if (i % 3 === 0) { pluck(bus, at, hz, 0.08, -0.2, 0.5); pluck(bus, at + step * 1.5, hz, 0.03, 0.5, 0.6); }
-        else if (i % 3 === 1) { pluck(bus, at, hz * 2, 0.045, 0.2, 0.5); bell(bus, at, hz * 2, 0.022, -0.3); }
-        else { pluck(bus, at, hz, 0.06, -0.3, 0.5); pluck(bus, at, hz * 2, 0.03, 0.3, 0.6); }
-      });
-      // underneath: rolling arpeggio on even pairs, chord on the beat on odd ones
-      for (let k = 0, at = t0; at < t0 + dur - 0.1; k++, at += step) {
-        if (i % 2 === 0) pluck(bus, at, hzOf(chord[ARPS[(i / 2) % ARPS.length][k % 6]] + key), 0.04, k % 2 ? 0.5 : -0.5, 0.45);
-        else if (k % 2 === 0) chord.slice(0, 3).forEach((semi, n) => pluck(bus, at, hzOf(semi + key), 0.028, n - 1, 0.4));
-        if (i >= 5 && k % 4 === 0) kick(bus, at, 0.15);   // later fixes keep a pulse, so the film builds
-        if (i >= 7 && k % 2 === 1) hat(bus, at, 0.018, k % 4 === 1 ? -0.3 : 0.3);
-      }
+      // starts with just a held chord and a pulse; the rest of the bed joins on "The shop is closed."
+      CHORDS.vi.forEach((semi, n) => pad(bus, t0, 2.4, hzOf(semi), 0.03, (n - 1) * 0.25));
+      for (let b = 0; b < 4; b++) kick(bus, t0 + b * BEAT, 0.12);
+      bass(bus, t0 + 1.0, hzOf(CHORDS.vi[0], -1), 0.12, 0.5); // "IT'S 9 PM."
+      bed(t0 + 2.0, 8, CHORDS.vi, false);
+      blip(bus, t0 + 3.5, hzOf(CHORDS.vi[1], 1), 0.04, 0);   // the red line
+    } else if (scene.name === 'chain') {
+      // summary: IV then V, a soft rising note as each pill pops, then the tune once more
+      bed(t0, 6, CHORDS.IV, true);
+      bed(t0 + 3, 6, CHORDS.V, true);
+      SCALE.forEach((semi, n) => pluck(bus, t0 + 0.5 + n * 0.25, hzOf(semi, 1), 0.055, n / 20 - 0.2, 0.5));
+      tune(t0 + 3.0, TUNE.A.slice(0, 12));
+    } else if (scene.name === 'close') {
+      // close: home chord, a soft bell as COMING SOON pops, the tune twice, then let the chord ring
+      bed(t0, 12, CHORDS.I, true);
+      [0, 7, 12].forEach((semi, n) => pad(bus, t0 + 6, dur - 5, hzOf(semi), 0.034, (n - 1) * 0.25));
+      bell(bus, t0 + 2.0, hzOf(12, 0), 0.06, 0);
+      tune(t0 + 2.0, TUNE.D);
+      tune(t0 + 5.5, TUNE.A.slice(0, 5));
+      bass(bus, t0 + 6, hzOf(0, -1), 0.12, 1.2);
+    } else if (scene.pair && scene.flash) {
+      // problem: bed only, on a minor chord. A soft pop as each card appears, a low note on the red line.
+      const chord = ASK_SEQ[scene.index];
+      bed(t0, 6, chord, false);
+      [2, 1, 0].forEach((tone, n) => blip(bus, t0 + 0.5 + n * 0.25, hzOf(chord[tone], 1), 0.045, (n - 1) * 0.2));
+      bass(bus, t0 + 1.5, hzOf(chord[0], -1), 0.11, 0.4);
     } else {
-      // close: hold the home chord, rise into the bell where COMING SOON pops, then let it ring
-      const key = KEY_OF[PAIRS.length - 1];
-      const hit = t0 + 2.0;
-      const step = 30 / m.bpm;
-      [0, 7, 12, 16, 19].forEach((semi, i) => pad(bus, t0, dur + 1.2, hzOf(semi + key), 0.036, i / 2 - 1));
-      bass(bus, t0, hzOf(key, -1), 0.14, 1.5);
-      riser(bus, t0 + 0.3, 1.7, 0.18);
-      kick(bus, hit, 0.4);
-      sub(bus, hit);
-      bass(bus, hit, hzOf(key, -1), 0.16, dur * 0.4);
-      bell(bus, hit, hzOf(12 + key, 1), 0.11, -0.2);
-      bell(bus, hit + 0.02, hzOf(7 + key, 1), 0.07, 0.3);
-      const climb = [0, 4, 7, 12, 16, 12, 7, 4, 2, 7, 9, 14, 16, 12, 9, 7];
-      for (let k = 0, at = hit + step; at < t0 + dur - 2.2; k++, at += step) {
-        pluck(bus, at, hzOf(climb[k % climb.length] + key, 1), 0.06, k % 2 ? 0.45 : -0.45, 0.5);
-      }
-      bell(bus, t0 + dur - 2.4, hzOf(12 + key, 1), 0.08, 0);
+      // solution: same bed, major chord, shaker joins, a soft bell with the green tick, and the tune
+      const chord = ANSWER_SEQ[scene.index];
+      bed(t0, 7, chord, true);
+      bell(bus, t0 + 0.5, hzOf(chord[2], 1), 0.035, 0);
+      tune(t0, TUNE_SEQ[scene.index]);
     }
     t0 += dur;
   }
@@ -565,20 +533,22 @@ function synthAudio(path, durationSeconds) {
   // room: the send bus through a small stereo reverb
   const wetLeft = reverb(bus.send, [0.0297, 0.0371, 0.0411, 0.0437]);
   const wetRight = reverb(bus.send, [0.0304, 0.0378, 0.0418, 0.0444]);
-  let low = [0, 0];
+  const low = [0, 0];
+  const top = [0, 0];
   let sum = 0;
   const channels = [bus.left, bus.right];
   [wetLeft, wetRight].forEach((wet, c) => {
     for (let i = 0; i < n; i++) {
       const v = channels[c][i] + wet[i] * 0.3;
       low[c] += (v - low[c]) * 0.004;  // one-pole high-pass at about 30 Hz: no rumble, no DC
-      channels[c][i] = v - low[c];
+      top[c] += (v - low[c] - top[c]) * 0.5; // and a gentle low-pass near 5 kHz: nothing sharp in headphones
+      channels[c][i] = top[c];
       sum += channels[c][i] * channels[c][i];
     }
   });
 
   // master: one level for the whole film, a soft knee instead of clipping, fades at both ends
-  const gain = 0.092 / Math.sqrt(sum / (2 * n));
+  const gain = 0.085 / Math.sqrt(sum / (2 * n));
   const end = Math.round(durationSeconds * SR);
   const pcm = Buffer.alloc(end * 4);
   for (let i = 0; i < end; i++) {
@@ -688,40 +658,6 @@ function kick(bus, start, amp) {
   mix(bus, start, out, 0, 0.04);
 }
 
-// snare: a short tone with a burst of noise on top
-function snare(bus, start, amp) {
-  const len = Math.round(0.16 * SR);
-  const out = new Float64Array(len);
-  let low = 0;
-  for (let i = 0; i < len; i++) {
-    const t = i / SR;
-    const x = noise();
-    low += (x - low) * 0.45;
-    out[i] = (low * Math.exp(-t / 0.045) + 0.5 * Math.sin(2 * Math.PI * 190 * t) * Math.exp(-t / 0.03)) * amp;
-  }
-  mix(bus, start, out, 0.1, 0.2);
-}
-
-// hat roll: hits that get closer together and louder into the cut
-function roll(bus, start, dur, amp) {
-  for (let at = 0, gap = 0.11; at < dur; at += gap, gap = Math.max(0.035, gap * 0.9)) {
-    hat(bus, start + at, amp * (0.3 + 0.7 * at / dur), at % 0.2 > 0.1 ? 0.3 : -0.3);
-  }
-}
-
-// glide: a bass note that slides up an octave into the cut
-function glide(bus, start, dur, hz, amp) {
-  const len = Math.round(dur * SR);
-  const out = new Float64Array(len);
-  let phase = 0;
-  for (let i = 0; i < len; i++) {
-    const p = i / len;
-    phase += 2 * Math.PI * hz * Math.pow(2, p) / SR;
-    out[i] = (Math.sin(phase) + 0.3 * Math.sin(2 * phase)) * p * amp * Math.min(1, (1 - p) / 0.05);
-  }
-  mix(bus, start, out, 0, 0.15);
-}
-
 // closed hi-hat: a short burst of high-passed noise
 function hat(bus, start, amp, pan) {
   const len = Math.round(0.06 * SR);
@@ -762,28 +698,27 @@ function bell(bus, start, hz, amp, pan) {
   mix(bus, start, out, pan, 0.6);
 }
 
-// riser: noise whose low-pass opens as it climbs, with a quick fade instead of a hard cut
-function riser(bus, start, dur, amp) {
-  const len = Math.round(dur * SR);
+// keys: a soft electric-piano note for the chords
+function keys(bus, start, hz, amp, pan) {
+  const len = Math.round(0.9 * SR);
   const out = new Float64Array(len);
-  let smooth = 0;
   for (let i = 0; i < len; i++) {
-    const p = i / len;
-    smooth += (noise() - smooth) * (0.02 + 0.09 * p * p);
-    out[i] = smooth * p * p * 4 * amp * Math.min(1, (1 - p) / 0.04);
+    const t = i / SR;
+    const w = 2 * Math.PI * hz * t;
+    out[i] = (Math.sin(w) + 0.35 * Math.sin(2 * w) * Math.exp(-t / 0.12) + 0.1 * Math.sin(3 * w) * Math.exp(-t / 0.06)) * Math.min(1, i / (0.006 * SR)) * Math.exp(-t / 0.28) * amp;
   }
-  mix(bus, start, out, 0, 0.3);
+  mix(bus, start, out, pan, 0.3);
 }
 
-// sub-drop for the flash and the final hit
-function sub(bus, start) {
-  const len = Math.round(1.4 * SR);
+// blip: a short rounded pop for things appearing on screen
+function blip(bus, start, hz, amp, pan) {
+  const len = Math.round(0.09 * SR);
   const out = new Float64Array(len);
   let phase = 0;
   for (let i = 0; i < len; i++) {
     const p = i / len;
-    phase += 2 * Math.PI * lerp(56, 34, p) / SR;
-    out[i] = Math.sin(phase) * Math.exp(-3 * p) * 0.36;
+    phase += 2 * Math.PI * hz * (1.25 - 0.25 * p) / SR;
+    out[i] = Math.sin(phase) * Math.sin(Math.PI * p) * amp;
   }
-  mix(bus, start, out, 0, 0.1);
+  mix(bus, start, out, pan, 0.3);
 }
