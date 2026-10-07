@@ -1,7 +1,8 @@
-// Renders the Kapkoti Solution wealth-onboarding film frame by frame and encodes it with ffmpeg.
+// Renders the Kapkoti Solution homepage film frame by frame and encodes it with ffmpeg.
 // Every frame is drawn in code: no stock footage, no video editor.
 // Structure: problem act (high BPM, suspense, rising curve) -> silence -> sub-drop ->
 // solution act (low BPM, calm) -> exciting build into "COMING SOON". Single window, text-driven.
+// Story follows the homepage: a small business owner's evening, then the solutions the site lists.
 // Usage: pnpm video  (needs ffmpeg on PATH)
 import { createCanvas, GlobalFonts } from '@napi-rs/canvas';
 import { execFileSync } from 'node:child_process';
@@ -12,22 +13,23 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const FPS = 30;
-const W = 1600;   // logical design size; rendered at W*SS for crispness
+const W = 1600;   // logical design size; rendered at W*SS, then scaled to 1080p
 const H = 900;
-const SS = 2;     // supersample factor
+const SS = 1.5;   // supersample factor
 const FRAMES_DIR = join(ROOT, '.cache', 'frames');
-const OUT_MP4 = join(ROOT, 'public', 'media', 'workflow.mp4');
-const TEASER_MP4 = join(ROOT, 'public', 'media', 'teaser.mp4');
+const OUT_MP4 = join(ROOT, 'media', 'workflow.mp4');
+const TEASER_MP4 = join(ROOT, 'media', 'teaser.mp4');
 
 // palettes
-const INK = '#243f35';      // brand green
-const CREAM = '#f5f2e9';
+const INK = '#0a0a0b';      // site black
+const CREAM = '#f4f4f5';
 const DARK = '#16281f';
-const PROB_BG = '#1c1210';  // problem-act charcoal
-const LEFT_INK = '#e8ded6'; // paper of the problem world
-const BAD_RED = '#c2544a';  // alarm red, problem act only
-const ACCENT = '#c96f4a';   // warm terracotta
-const GOOD = '#4d8563';
+const PROB_BG = '#140b0b';  // problem-act charcoal
+const BAD_RED = '#ef4444';  // alarm red, problem act only
+const ACCENT = '#d97706';   // site amber, readable on light and dark
+const EMERALD = '#10b981'; // site gradient start
+const AMBER = '#fcd34d';   // site gradient end
+const GOOD = '#10b981';
 
 for (const font of ['/System/Library/Fonts/Supplemental/Georgia.ttf', '/System/Library/Fonts/Supplemental/Georgia Bold.ttf']) {
   try { GlobalFonts.registerFromPath(font); } catch { /* fall back to default sans */ }
@@ -36,50 +38,47 @@ for (const font of ['/System/Library/Fonts/Supplemental/Georgia.ttf', '/System/L
 // bpm is the marketing: problems run fast, solutions run calm, and the curve keeps changing
 const MUSIC = {
   hook:    { kind: 'tense', bpm: 176, intensity: 0.60, riser: 1.8 },
-  packet:  { kind: 'tense', bpm: 170, intensity: 0.75, riser: 2.0 },
-  chase:   { kind: 'tense', bpm: 174, intensity: 0.82, riser: 2.2 },
-  retype:  { kind: 'tense', bpm: 168, intensity: 0.88, riser: 2.4 },
-  clock:   { kind: 'tense', bpm: 178, intensity: 0.95, riser: 2.6 },
+  billing: { kind: 'tense', bpm: 170, intensity: 0.75, riser: 2.0 },
+  stock:   { kind: 'tense', bpm: 168, intensity: 0.85, riser: 2.2 },
+  chase:   { kind: 'tense', bpm: 178, intensity: 0.95, riser: 2.6 },
   turn:    { kind: 'turn',  riser: 4.2 },
   reveal:  { kind: 'calm',  bpm: 92,  intensity: 0.50 },
-  intake:  { kind: 'calm',  bpm: 94,  intensity: 0.55 },
-  verify:  { kind: 'calm',  bpm: 96,  intensity: 0.60 },
+  invoice: { kind: 'calm',  bpm: 94,  intensity: 0.55 },
+  data:    { kind: 'calm',  bpm: 96,  intensity: 0.60 },
   flow:    { kind: 'calm',  bpm: 92,  intensity: 0.60 },
-  numbers: { kind: 'calm',  bpm: 90,  intensity: 0.55 },
+  build:   { kind: 'calm',  bpm: 90,  intensity: 0.55 },
   close:   { kind: 'close', bpm: 108, intensity: 0.70, riser: 3.0 },
 };
 
 const CAM = {
   hook:    { z0: 1.06, z1: 1.0 },
-  packet:  { z0: 1.0,  z1: 1.06 },
-  chase:   { z0: 1.05, z1: 1.0 },
-  retype:  { z0: 1.0,  z1: 1.05 },
-  clock:   { z0: 1.0,  z1: 1.07 },
+  billing: { z0: 1.0,  z1: 1.06 },
+  stock:   { z0: 1.05, z1: 1.0 },
+  chase:   { z0: 1.0,  z1: 1.07 },
   turn:    { z0: 1.08, z1: 1.0 },
   reveal:  { z0: 1.0,  z1: 1.05 },
-  intake:  { z0: 1.04, z1: 1.0 },
-  verify:  { z0: 1.0,  z1: 1.05 },
+  invoice: { z0: 1.04, z1: 1.0 },
+  data:    { z0: 1.0,  z1: 1.05 },
   flow:    { z0: 1.04, z1: 1.0 },
-  numbers: { z0: 1.0,  z1: 1.06 },
+  build:   { z0: 1.0,  z1: 1.06 },
   close:   { z0: 1.0,  z1: 1.05 },
 };
 
 const scenes = [
-  { name: 'hook',    seconds: 7, draw: drawHook },
-  { name: 'packet',  seconds: 8, draw: drawPacket },
-  { name: 'chase',   seconds: 8, draw: drawChase },
-  { name: 'retype',  seconds: 8, draw: drawRetype },
-  { name: 'clock',   seconds: 8, draw: drawClock },
+  { name: 'hook',    seconds: 6, draw: drawHook },
+  { name: 'billing', seconds: 7, draw: drawBilling },
+  { name: 'stock',   seconds: 7, draw: drawStock },
+  { name: 'chase',   seconds: 7, draw: drawChase },
   { name: 'turn',    seconds: 5, draw: drawTurn },
   { name: 'reveal',  seconds: 5, draw: drawReveal },
-  { name: 'intake',  seconds: 8, draw: drawIntake },
-  { name: 'verify',  seconds: 8, draw: drawVerify },
-  { name: 'flow',    seconds: 8, draw: drawFlow },
-  { name: 'numbers', seconds: 9, draw: drawNumbers },
-  { name: 'close',   seconds: 10, draw: drawClose },
+  { name: 'invoice', seconds: 7, draw: drawInvoice },
+  { name: 'data',    seconds: 7, draw: drawData },
+  { name: 'flow',    seconds: 7, draw: drawFlow },
+  { name: 'build',   seconds: 8, draw: drawBuild },
+  { name: 'close',   seconds: 9, draw: drawClose },
 ].map(s => ({ ...s, music: MUSIC[s.name], cam: CAM[s.name] }));
 
-const totalSeconds = scenes.reduce((sum, s) => sum + s.seconds, 0);   // 92s
+const totalSeconds = scenes.reduce((sum, s) => sum + s.seconds, 0);   // 75s
 const totalFrames = totalSeconds * FPS;
 
 // ---------- helpers ----------
@@ -161,7 +160,7 @@ function stamp(ctx, x, y, text, scaleP = 1) {
   ctx.strokeStyle = BAD_RED; ctx.lineWidth = 5;
   ctx.beginPath(); ctx.roundRect(-150, -40, 300, 80, 10); ctx.stroke();
   ctx.fillStyle = BAD_RED;
-  ctx.font = '700 34px Manrope, Arial, sans-serif'; ctx.textAlign = 'center';
+  ctx.font = '700 34px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(text, 0, 12);
   ctx.restore();
 }
@@ -170,7 +169,7 @@ function stamp(ctx, x, y, text, scaleP = 1) {
 function headline(ctx, text, y, size = 72, color = CREAM, alpha = 1) {
   ctx.globalAlpha = alpha;
   ctx.fillStyle = color;
-  ctx.font = `bold ${size}px Georgia, serif`;
+  ctx.font = `800 ${size}px Avenir Next, Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText(text, W / 2, y);
   ctx.globalAlpha = 1;
@@ -179,7 +178,7 @@ function headline(ctx, text, y, size = 72, color = CREAM, alpha = 1) {
 function subline(ctx, text, y, size = 30, color = withAlpha(CREAM, 0.75), alpha = 1) {
   ctx.globalAlpha = alpha;
   ctx.fillStyle = color;
-  ctx.font = `600 ${size}px Manrope, Arial, sans-serif`;
+  ctx.font = `600 ${size}px Avenir Next, Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText(text, W / 2, y);
   ctx.globalAlpha = 1;
@@ -187,169 +186,124 @@ function subline(ctx, text, y, size = 30, color = withAlpha(CREAM, 0.75), alpha 
 
 // ---------- scenes ----------
 
-// hook: "a client says yes" then the paperwork begins; riser into the next scene
+// hook: closing time, but the paperwork is only starting
 function drawHook(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   suspenseBG(ctx, t, t > 0.5);
   const drop = ease(clamp01(t * 5));
   dot(ctx, W / 2, lerp(-60, H * 0.26, drop));
-  const p = pop(t, 1.2 / S, 0.6);
-  if (p > 0) headline(ctx, 'A CLIENT SAYS YES.', H * 0.52, 88, CREAM, Math.min(1, p));
-  const p2 = pop(t, 2.6 / S, 0.45);
-  if (p2 > 0) subline(ctx, 'And then… the paperwork begins.', H * 0.64, 32, withAlpha(CREAM, 0.75), Math.min(1, p2));
-  const p3 = pop(t, 4.4 / S, 0.4);
-  if (p3 > 0) subline(ctx, 'W A T C H   W H A T   H A P P E N S', H * 0.76, 24, BAD_RED, Math.min(1, p3) * 0.9);
+  const p = pop(t, 1.0 / S, 0.6);
+  if (p > 0) headline(ctx, 'IT’S 9 PM.', H * 0.52, 96, CREAM, Math.min(1, p));
+  const p2 = pop(t, 2.2 / S, 0.45);
+  if (p2 > 0) subline(ctx, 'The shop is closed. The work is not.', H * 0.64, 34, withAlpha(CREAM, 0.75), Math.min(1, p2));
+  const p3 = pop(t, 3.8 / S, 0.4);
+  if (p3 > 0) subline(ctx, 'A   D A Y   I N   A   S M A L L   B U S I N E S S', H * 0.76, 24, BAD_RED, Math.min(1, p3) * 0.9);
   grain(ctx, frameIndex, true);
 }
 
-// S2 packet: PRINT > SIGN > SCAN > EMAIL BACK, reject stamp, bounce rate
-function drawPacket(ctx, scene, t, frameIndex) {
+// billing: TYPE > CHECK > RETYPE > FILE, then the GST mismatch stamp
+function drawBilling(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   suspenseBG(ctx, t, true);
-  headline(ctx, 'the form packet loop.', H * 0.2, 48, withAlpha(CREAM, 0.85), clamp01((t - 0.3 / S) / 0.3));
-  const steps = ['PRINT.', 'SIGN.', 'SCAN.', 'EMAIL BACK.'];
+  headline(ctx, 'bills, typed by hand.', H * 0.2, 50, withAlpha(CREAM, 0.85), clamp01((t - 0.3 / S) / 0.3));
+  const steps = ['TYPE.', 'CHECK.', 'RETYPE.', 'FILE.'];
   steps.forEach((s, i) => {
-    const p = pop(t, (1.4 + i * 1.05) / S, 0.3);
+    const p = pop(t, (1.2 + i * 0.85) / S, 0.3);
     if (p <= 0) return;
     ctx.globalAlpha = Math.min(1, p);
     ctx.fillStyle = i === 3 ? BAD_RED : CREAM;
-    ctx.font = 'bold 58px Georgia, serif'; ctx.textAlign = 'center';
-    ctx.fillText(s, W * 0.5 + (i - 1.5) * 360, H * 0.38);
-    if (i > 0) {
-      ctx.globalAlpha = Math.min(0.4, Math.min(1, p));
-      ctx.fillStyle = CREAM;
-      ctx.font = '600 22px Manrope, Arial, sans-serif';
-      ctx.fillText(['wait', 'wait', 'wait'][i - 1], W * 0.5 + (i - 1.5) * 360 - 20, H * 0.38 - 14);
-    }
+    ctx.font = '800 58px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(s, W * 0.5 + (i - 1.5) * 340, H * 0.38);
     ctx.globalAlpha = 1;
   });
-  const sp = pop(t, 4.6 / S, 0.35);
+  const sp = pop(t, 4.3 / S, 0.35);
   if (sp > 0) {
-    card(ctx, W * 0.5 - 250, H * 0.6 - 48, 500, 82, '#efe9dd', 12);
-    ctx.fillStyle = INK; ctx.font = '600 26px Manrope, Arial, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('one missing line = the whole packet returns', W / 2, H * 0.6 + 10);
-    stamp(ctx, W * 0.5, H * 0.6 + 8 - 0, 'REJECTED · NIGO', Math.min(1, sp));
-  }
-  const st = pop(t, 6.2 / S, 0.4);
-  if (st > 0) subline(ctx, '20–40% of applications bounce back at least once.', H * 0.82, 30, BAD_RED, Math.min(1, st));
-  grain(ctx, frameIndex, true);
-}
-
-// S3 chase: advisor becomes the courier, phone calls and emails stack
-function drawChase(ctx, scene, t, frameIndex) {
-  const S = scene.seconds;
-  suspenseBG(ctx, t, true);
-  const p1 = pop(t, 0.4 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'chase, resend, wait.', H * 0.2, 62, CREAM, Math.min(1, p1));
-  // ringing phone right
-  ctx.save();
-  const shake = t > 0.2 ? Math.sin(t * 40) * 2 : 0;
-  ctx.translate(W * 0.78 + shake, H * 0.56);
-  ctx.fillStyle = CREAM; ctx.beginPath(); ctx.roundRect(-70, -150, 140, 300, 24); ctx.fill();
-  ctx.fillStyle = PROB_BG; ctx.beginPath(); ctx.roundRect(-56, -124, 112, 248, 14); ctx.fill();
-  const msgs = ['resend page 4', 'missing signature', 'illegible scan', 'wrong form version'];
-  msgs.forEach((msg, i) => {
-    const p = pop(t, (1.6 + i * 0.9) / S, 0.3);
-    if (p <= 0) return;
-    ctx.fillStyle = BAD_RED;
-    ctx.beginPath(); ctx.roundRect(60, -100 + i * 56, 190, 44, 10); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '600 16px Manrope, Arial, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(msg, 155, -71 + i * 56);
-  });
-  ctx.restore();
-  ['call #1', 'call #4', 'call #9'].forEach((m, i) => {
-    const p = pop(t, (2.0 + i * 1.0) / S, 0.3);
-    if (p <= 0) return;
-    ctx.globalAlpha = Math.min(1, p) * 0.9;
-    ctx.fillStyle = CREAM; ctx.font = '700 30px Manrope, Arial, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(m, 120, H * 0.42 + i * 70);
+    ctx.globalAlpha = Math.min(1, sp);
+    card(ctx, W * 0.5 - 380, H * 0.5, 760, 82, '#e4e4e7', 12);
+    ctx.fillStyle = INK; ctx.font = '600 26px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('one wrong HSN code and the return comes back', W / 2, H * 0.5 + 51);
     ctx.globalAlpha = 1;
-  });
-  const p2 = pop(t, 6.2 / S, 0.45);
-  if (p2 > 0) subline(ctx, 'The most expensive person in the firm becomes the courier.', H * 0.84, 30, BAD_RED, Math.min(1, p2));
+    stamp(ctx, W * 0.5, H * 0.5 + 142, 'GST MISMATCH', Math.min(1, sp));
+  }
+  const st = pop(t, 5.6 / S, 0.4);
+  if (st > 0) subline(ctx, 'The return bounces. The evening is gone.', H * 0.86, 30, BAD_RED, Math.min(1, st));
   grain(ctx, frameIndex, true);
 }
 
-// S4 retype: same data into three systems, mismatch stamp
-function drawRetype(ctx, scene, t, frameIndex) {
+// stock: the same numbers kept in three places that never agree
+function drawStock(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   suspenseBG(ctx, t, true);
   const p1 = pop(t, 0.4 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'one detail, retyped three times.', H * 0.18, 50, CREAM, Math.min(1, p1));
-  const systems = ['CRM', 'PORTFOLIO', 'COMPLIANCE'];
-  systems.forEach((sys, i) => {
-    const p = pop(t, (1.2 + i * 0.9) / S, 0.35);
+  if (p1 > 0) headline(ctx, 'stock, kept in three places.', H * 0.18, 50, CREAM, Math.min(1, p1));
+  const places = ['NOTEBOOK', 'EXCEL', 'WHATSAPP'];
+  places.forEach((place, i) => {
+    const p = pop(t, (1.1 + i * 0.8) / S, 0.35);
     if (p <= 0) return;
-    const x = W * 0.5 - 480 + i * 340, y = H * 0.34;
+    const x = W * 0.5 - 490 + i * 340, y = H * 0.3;
     ctx.globalAlpha = Math.min(1, p);
-    card(ctx, x, y, 300, 250, '#e8ded6', 12);
-    ctx.fillStyle = INK; ctx.font = '700 26px Manrope, Arial, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(sys, x + 24, y + 44);
+    card(ctx, x, y, 300, 250, '#e4e4e7', 12);
+    ctx.fillStyle = INK; ctx.font = '700 26px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(place, x + 24, y + 44);
     for (let k = 0; k < 5; k++) {
       ctx.fillStyle = withAlpha(INK, 0.3);
       ctx.fillRect(x + 24, y + 70 + k * 32, 240, 10);
     }
     // someone typing: row highlights flicker
-    if (t > (1.6 + i * 0.9) / S && pseudo(frameIndex * 3.1 + i) > 0.4) {
-      ctx.fillStyle = withAlpha(BAD_RED, 0.45);
+    if (t > (1.5 + i * 0.8) / S && pseudo(frameIndex * 3.1 + i) > 0.4) {
+      ctx.fillStyle = withAlpha(BAD_RED, 0.55);
       ctx.fillRect(x + 24 + pseudo(frameIndex + i) * 200, y + 70 + (frameIndex % 5) * 32, 26, 10);
     }
     ctx.globalAlpha = 1;
   });
-  const sp = pop(t, 4.8 / S, 0.35);
-  if (sp > 0) stamp(ctx, W * 0.5, H * 0.62, 'MISMATCH', Math.min(1, sp));
-  const p2 = pop(t, 6.4 / S, 0.45);
-  if (p2 > 0) subline(ctx, 'every bounce costs $50–100 and days of waiting.', H * 0.84, 30, BAD_RED, Math.min(1, p2));
+  const sp = pop(t, 4.2 / S, 0.35);
+  if (sp > 0) stamp(ctx, W * 0.5, H * 0.7, 'NO MATCH', Math.min(1, sp));
+  const p2 = pop(t, 5.5 / S, 0.45);
+  if (p2 > 0) subline(ctx, 'Nobody knows what is really on the shelf.', H * 0.86, 30, BAD_RED, Math.min(1, p2));
   grain(ctx, frameIndex, true);
 }
 
-// S5 clock: the calendar sprint, the three damning numbers, strongest heartbeat
-function drawClock(ctx, scene, t, frameIndex) {
+// chase: payments and orders followed up by hand, one message at a time
+function drawChase(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   suspenseBG(ctx, t, true);
-  headline(ctx, 'meanwhile, the client waits.', H * 0.16, 44, CREAM, clamp01((t - 0.3 / S) / 0.3));
-  // flipping calendar pages
+  const p1 = pop(t, 0.4 / S, 0.45);
+  if (p1 > 0) headline(ctx, 'chase, remind, wait.', H * 0.2, 62, CREAM, Math.min(1, p1));
+  // buzzing phone right
   ctx.save();
-  ctx.translate(W * 0.5, H * 0.42);
-  for (let i = 0; i < 3; i++) {
-    const flip = pseudo(frameIndex * 0.7 + i * 13); // deterministic page flutter
-    ctx.globalAlpha = 0.9;
-    ctx.save(); ctx.translate((i - 1) * 210, 0); ctx.rotate((i - 1) * flip * 0.12);
-    card(ctx, -90, -60, 180, 120, '#e8ded6', 10);
-    ctx.fillStyle = i === 2 ? BAD_RED : INK;
-    ctx.font = 'bold 40px Georgia, serif'; ctx.textAlign = 'center';
-    ctx.fillText('DAY', 0, -6);
-    ctx.font = 'bold 56px Georgia, serif';
-    ctx.fillText(String(3 + Math.floor(((t * 14 + i * 9) % 60))), 0, 46);
-    ctx.restore();
-  }
-  ctx.globalAlpha = 1;
-  ctx.restore();
-  const facts = [
-    ['28% of firms take 20+ days to onboard.', 2.4],
-    ['~30% take 90+ days for UHNW clients.', 3.9],
-    ['70% of clients would switch for a digital-first firm.', 5.4],
-  ];
-  facts.forEach(([txt, d], i) => {
-    const p = pop(t, d / S, 0.4);
+  const shake = t > 0.2 ? Math.sin(t * 40) * 2 : 0;
+  ctx.translate(W * 0.74 + shake, H * 0.54);
+  ctx.fillStyle = CREAM; ctx.beginPath(); ctx.roundRect(-70, -150, 140, 300, 24); ctx.fill();
+  ctx.fillStyle = PROB_BG; ctx.beginPath(); ctx.roundRect(-56, -124, 112, 248, 14); ctx.fill();
+  const msgs = ['payment pending', 'resend the invoice', 'which order was it?', 'call me back'];
+  msgs.forEach((msg, i) => {
+    const p = pop(t, (1.4 + i * 0.8) / S, 0.3);
     if (p <= 0) return;
-    ctx.globalAlpha = Math.min(1, p);
-    ctx.fillStyle = i === 2 ? BAD_RED : CREAM;
-    ctx.font = `600 ${i === 2 ? 34 : 29}px Manrope, Arial, sans-serif`; ctx.textAlign = 'center';
-    ctx.fillText(txt, W / 2, H * 0.7 + i * 52);
+    ctx.fillStyle = BAD_RED;
+    ctx.beginPath(); ctx.roundRect(60, -100 + i * 56, 210, 44, 10); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '600 17px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(msg, 165, -72 + i * 56);
+  });
+  ctx.restore();
+  ['reminder #1', 'reminder #4', 'reminder #9'].forEach((m, i) => {
+    const p = pop(t, (1.8 + i * 0.9) / S, 0.3);
+    if (p <= 0) return;
+    ctx.globalAlpha = Math.min(1, p) * 0.9;
+    ctx.fillStyle = CREAM; ctx.font = '700 32px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(m, W * 0.16, H * 0.42 + i * 70);
     ctx.globalAlpha = 1;
   });
-  const p2 = pop(t, 7.0 / S, 0.4);
-  if (p2 > 0) subline(ctx, 'some firms lost half their clients during the wait.', H * 0.92, 26, BAD_RED, Math.min(1, p2));
+  const p2 = pop(t, 5.4 / S, 0.45);
+  if (p2 > 0) subline(ctx, 'The owner becomes the clerk.', H * 0.86, 32, BAD_RED, Math.min(1, p2));
   grain(ctx, frameIndex, true);
 }
 
-// S6 the turn: heartbeat slow, near silence, then the white flash
+// the turn: heartbeat slows, near silence, then the white flash
 function drawTurn(ctx, scene, t, frameIndex) {
-  ctx.fillStyle = '#0a0908'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, W, H);
   // three slow heartbeats
   const beatT = [0.12, 0.42, 0.72];
-  beatT.forEach((b, i) => {
+  beatT.forEach((b) => {
     const hb = Math.max(0, 1 - Math.abs(t - b) * 6);
     if (hb > 0) {
       const v = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, H * 0.7);
@@ -360,32 +314,34 @@ function drawTurn(ctx, scene, t, frameIndex) {
     }
   });
   const a = clamp01((t - 0.3) / 0.5);
-  headline(ctx, 'The difference was never effort.', H * 0.62, 44, withAlpha(CREAM, 0.9), a);
+  headline(ctx, 'The problem was never effort.', H * 0.62, 46, withAlpha(CREAM, 0.9), a);
   // final 18%: hard flash to white
   if (t > 0.82) {
-    ctx.fillStyle = `rgba(245,242,233,${ease((t - 0.82) / 0.18)})`;
+    ctx.fillStyle = `rgba(244,244,245,${ease((t - 0.82) / 0.18)})`;
     ctx.fillRect(0, 0, W, H);
   }
   grain(ctx, frameIndex, true);
 }
 
-// S7 reveal: cream world, the pipeline draws itself: hello to invested
+// reveal: light world, the day's work joins up into one line
 function drawReveal(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
   const p1 = pop(t, 0.4 / S, 0.4);
-  if (p1 > 0) headline(ctx, 'What the work fell between…', H * 0.24, 50, INK, Math.min(1, p1));
-  // pipeline: line grows left to right, nodes pop
-  const nodes = ['INTAKE', 'VERIFY', 'MATCH', 'POST'];
+  if (p1 > 0) headline(ctx, 'One place for the day’s work…', H * 0.24, 52, INK, Math.min(1, p1));
+  // line grows left to right, nodes pop
+  const nodes = ['ORDER', 'INVOICE', 'STOCK', 'BOOKS'];
   const nodesP = pop(t, 1.0 / S, 0.5);
   if (nodesP > 0) {
     const x0 = W * 0.18, x1 = W * 0.82, y = H * 0.5;
     const grow = ease(clamp01((t - 1.0 / S) / 0.5));
-    ctx.strokeStyle = INK; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    const line = ctx.createLinearGradient(x0, 0, x1, 0);
+    line.addColorStop(0, EMERALD); line.addColorStop(1, AMBER);
+    ctx.strokeStyle = line; ctx.lineWidth = 8; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(lerp(x0, x1, grow), y); ctx.stroke();
-    ['HELLO', 'INVESTED'].forEach((w, i) => {
+    ['MORNING', 'CLOSE'].forEach((w, i) => {
       ctx.fillStyle = withAlpha(INK, 0.55);
-      ctx.font = '700 24px Manrope, Arial, sans-serif'; ctx.textAlign = 'center';
+      ctx.font = '700 24px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText(w, i === 0 ? x0 : x1, y + 60);
     });
     nodes.forEach((n, i) => {
@@ -393,236 +349,229 @@ function drawReveal(ctx, scene, t, frameIndex) {
       if (np <= 0) return;
       const nx = lerp(x0, x1, (i + 0.5) / 4);
       ctx.globalAlpha = Math.min(1, np);
-      card(ctx, nx - 72, y - 34, 144, 68, INK, 34);
-      ctx.fillStyle = CREAM; ctx.font = '700 19px Manrope, Arial, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(n, nx, y + 6);
+      card(ctx, nx - 78, y - 34, 156, 68, INK, 34);
+      ctx.fillStyle = CREAM; ctx.font = '700 19px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(n, nx, y + 7);
       ctx.globalAlpha = 1;
     });
     dot(ctx, lerp(x0, x1, clamp01((t - 1.3 / S) / 0.55)), y, 10);
   }
-  const p2 = pop(t, 3.8 / S, 0.45);
-  if (p2 > 0) subline(ctx, '…is what the Kapkoti pipeline was built for.', H * 0.76, 34, ACCENT, Math.min(1, p2));
+  const p2 = pop(t, 3.6 / S, 0.45);
+  if (p2 > 0) subline(ctx, '…is what Kapkoti Solution builds.', H * 0.76, 36, ACCENT, Math.min(1, p2));
   grain(ctx, frameIndex, false);
 }
 
-// S8 intake: phone appears, secure link, progress bar, auto-resume
-function drawIntake(ctx, scene, t, frameIndex) {
+// invoice: billed from a phone, checked before it reaches the portal
+function drawInvoice(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
   const p1 = pop(t, 0.3 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'A secure link. Not a packet.', H * 0.18, 46, INK, Math.min(1, p1));
+  if (p1 > 0) headline(ctx, 'Invoices that check themselves.', H * 0.18, 50, INK, Math.min(1, p1));
   // phone slides up from bottom right
   const up = ease(clamp01((t - 0.6 / S) / 0.4));
   ctx.save();
-  ctx.translate(W * 0.72, lerp(H + 260, H * 0.56, up));
+  ctx.translate(W * 0.72, lerp(H + 260, H * 0.58, up));
   ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(-110, -200, 220, 400, 34); ctx.fill();
-  ctx.fillStyle = '#fdfcf6'; ctx.beginPath(); ctx.roundRect(-94, -170, 188, 340, 20); ctx.fill();
-  // SMS bubble
-  card(ctx, -70, -150, 150, 46, INK, 22);
-  ctx.fillStyle = CREAM; ctx.font = '600 15px Manrope, Arial, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('secure link sent', 0, -120);
-  // progress
-  const prog = clamp01((t - 1.6 / S) / (2.4 / S));
-  ctx.fillStyle = withAlpha(INK, 0.15); ctx.beginPath(); ctx.roundRect(-70, -70, 150, 16, 8); ctx.fill();
-  ctx.fillStyle = GOOD; ctx.beginPath(); ctx.roundRect(-70, -70, 150 * prog, 16, 8); ctx.fill();
-  ctx.fillStyle = INK; ctx.font = '600 19px Manrope, Arial, sans-serif';
-  ctx.fillText(`${Math.round(prog * 100)}% done`, 0, -22);
-  // resume chip
-  const rp = pop(t, 4.6 / S, 0.3);
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(-94, -170, 188, 340, 20); ctx.fill();
+  card(ctx, -75, -150, 150, 46, INK, 23);
+  ctx.fillStyle = CREAM; ctx.font = '600 16px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Tax invoice', 0, -121);
+  // invoice rows
+  for (let k = 0; k < 3; k++) {
+    ctx.fillStyle = withAlpha(INK, 0.14); ctx.beginPath(); ctx.roundRect(-75, -84 + k * 22, 150 - k * 28, 10, 5); ctx.fill();
+  }
+  // checking progress
+  const prog = clamp01((t - 1.6 / S) / (2.2 / S));
+  ctx.fillStyle = withAlpha(INK, 0.15); ctx.beginPath(); ctx.roundRect(-75, 2, 150, 16, 8); ctx.fill();
+  ctx.fillStyle = GOOD; ctx.beginPath(); ctx.roundRect(-75, 2, 150 * prog, 16, 8); ctx.fill();
+  ctx.fillStyle = INK; ctx.font = '600 19px Avenir Next, Arial, sans-serif';
+  ctx.fillText(`${Math.round(prog * 100)}% checked`, 0, 50);
+  const rp = pop(t, 4.2 / S, 0.3);
   if (rp > 0) {
     ctx.globalAlpha = Math.min(1, rp);
-    card(ctx, -70, -12, 150, 42, ACCENT, 21);
-    ctx.fillStyle = '#fff'; ctx.font = '700 15px Manrope, Arial, sans-serif';
-    ctx.fillText('auto-resume ✓', 0, 15);
+    card(ctx, -75, 76, 150, 44, GOOD, 22);
+    ctx.fillStyle = INK; ctx.font = '700 16px Avenir Next, Arial, sans-serif';
+    ctx.fillText('GST ready', 0, 104);
     ctx.globalAlpha = 1;
   }
   ctx.restore();
   // copy left
-  const lines = [['Finish it on your phone,', 'in one sitting.', 1.6],
-                 ['prefilled from your records', 2.8],
-                 ['gentle reminders, so nobody chases', 3.8]];
-  lines.forEach(([l1, l2, d], i) => {
-    const p = pop(t, d / S, 0.4);
+  const lines = [
+    { text: 'Billed from your phone,', y: 0, delay: 1.4, big: true },
+    { text: 'right the first time.', y: 46, delay: 1.4, big: true },
+    { text: 'GSTIN and HSN checked as you type', y: 130, delay: 2.8 },
+    { text: 'e-invoice and e-way bill details together', y: 186, delay: 3.6 },
+    { text: 'GSTR-1 export ready for your CA', y: 242, delay: 4.4 },
+  ];
+  lines.forEach((line) => {
+    const p = pop(t, line.delay / S, 0.4);
     if (p <= 0) return;
     ctx.globalAlpha = Math.min(1, p);
-    ctx.fillStyle = i === 0 ? INK : withAlpha(INK, 0.65);
-    if (i === 0) {
-      ctx.font = '600 34px Manrope, Arial, sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText(l1, W * 0.09, H * 0.46);
-      ctx.fillText(l2, W * 0.09, H * 0.46 + 44);
+    ctx.textAlign = 'left';
+    if (line.big) {
+      ctx.fillStyle = INK; ctx.font = '700 38px Avenir Next, Arial, sans-serif';
+      ctx.fillText(line.text, W * 0.09, H * 0.42 + line.y);
     } else {
-      ctx.font = '600 26px Manrope, Arial, sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText(l1, W * 0.09, H * 0.46 + (i + 0.4) * 68);
+      dot(ctx, W * 0.09 + 8, H * 0.42 + line.y - 8, 6, GOOD);
+      ctx.fillStyle = withAlpha(INK, 0.7); ctx.font = '600 26px Avenir Next, Arial, sans-serif';
+      ctx.fillText(line.text, W * 0.09 + 34, H * 0.42 + line.y);
     }
     ctx.globalAlpha = 1;
   });
   grain(ctx, frameIndex, false);
 }
 
-// S9 verify: guided e-sign that cannot be missed + automated KYC/AML
-function drawVerify(ctx, scene, t, frameIndex) {
+// data: a plain question typed in, an answer drawn back, with governed access
+function drawData(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
   const p1 = pop(t, 0.3 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'Every field watched. Every signature guided.', H * 0.18, 46, INK, Math.min(1, p1));
-  // signature glide
-  card(ctx, W * 0.5 - 350, H * 0.4, 700, 140, '#fdfcf6', 14);
-  ctx.fillStyle = withAlpha(INK, 0.6); ctx.font = '500 20px Manrope, Arial, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('SIGN HERE', W * 0.5 - 320, H * 0.4 + 38);
-  ctx.strokeStyle = withAlpha(INK, 0.3); ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(W * 0.5 - 320, H * 0.4 + 96); ctx.lineTo(W * 0.5 + 320, H * 0.4 + 96); ctx.stroke();
-  const sig = ease(clamp01((t - 1.0 / S) / (1.6 / S)));
-  if (sig > 0) {
-    ctx.strokeStyle = INK; ctx.lineWidth = 5; ctx.lineCap = 'round';
-    ctx.beginPath();
-    for (let i = 0; i <= sig * 60; i++) {
-      const xx = W * 0.5 - 300 + i * 10;
-      const yy = H * 0.4 + 74 + Math.sin(i * 0.5) * 16 * (i / 60);
-      i === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy);
-    }
-    ctx.stroke();
+  if (p1 > 0) headline(ctx, 'Ask your data. In plain words.', H * 0.18, 50, INK, Math.min(1, p1));
+  const left = W * 0.5 - 400;
+  // question box, typed one letter at a time
+  card(ctx, left, H * 0.27, 800, 84, '#ffffff', 16);
+  const question = 'What sold best this week?';
+  const typed = question.slice(0, Math.round(question.length * clamp01((t - 0.9 / S) / (1.6 / S))));
+  ctx.fillStyle = INK; ctx.font = '600 30px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(typed, left + 30, H * 0.27 + 53);
+  if (typed.length < question.length && frameIndex % 20 < 10) {
+    ctx.fillRect(left + 34 + ctx.measureText(typed).width, H * 0.27 + 26, 3, 34);
   }
-  const bp = pop(t, 2.8 / S, 0.3);
-  if (bp > 0) {
-    ctx.globalAlpha = Math.min(1, bp);
-    ctx.fillStyle = GOOD; ctx.beginPath(); ctx.arc(W * 0.5 + 310, H * 0.4 + 70, 20 + bp * 6, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '700 26px Manrope, Arial, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('✓', W * 0.5 + 310, H * 0.4 + 79);
-    ctx.globalAlpha = 1;
-  }
-  const checks = ['identity verified', 'sanctions screened', 'risk profile matched', '100% allocations'];
-  checks.forEach((c, i) => {
-    const p = pop(t, (2.8 + i * 0.75) / S, 0.3);
+  // answer bars grow in
+  const rows = [['Rice 25 kg', 1], ['Cooking oil', 0.76], ['Tea', 0.52], ['Sugar', 0.38]];
+  rows.forEach(([label, share], i) => {
+    const p = clamp01((t - (2.9 + i * 0.35) / S) / (0.9 / S));
     if (p <= 0) return;
-    ctx.globalAlpha = Math.min(1, p);
-    ctx.fillStyle = GOOD; ctx.beginPath(); ctx.arc(W * 0.5 - 540 + i * 360, H * 0.68, 10, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = INK; ctx.font = '600 23px Manrope, Arial, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(c, W * 0.5 - 516 + i * 360, H * 0.68 + 8);
+    const y = H * 0.45 + i * 62;
+    ctx.globalAlpha = Math.min(1, p * 3);
+    ctx.fillStyle = withAlpha(INK, 0.75); ctx.font = '600 24px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(label, left, y + 22);
+    const bar = ctx.createLinearGradient(left + 200, 0, left + 800, 0);
+    bar.addColorStop(0, EMERALD); bar.addColorStop(1, AMBER);
+    ctx.fillStyle = bar;
+    ctx.beginPath(); ctx.roundRect(left + 200, y, 600 * share * ease(p), 30, 8); ctx.fill();
     ctx.globalAlpha = 1;
   });
-  const p2 = pop(t, 6.4 / S, 0.4);
-  if (p2 > 0) subline(ctx, 'KYC, AML and suitability: minutes, not days.', H * 0.86, 30, ACCENT, Math.min(1, p2));
+  const p2 = pop(t, 5.4 / S, 0.4);
+  if (p2 > 0) subline(ctx, 'Governed AI: only the access it needs, and a trail you can check.', H * 0.86, 28, ACCENT, Math.min(1, p2));
   grain(ctx, frameIndex, false);
 }
 
-// S10 flow: straight-through posting, exceptions to humans
+// flow: the repetitive steps run on their own, people keep the decisions
 function drawFlow(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
   const p1 = pop(t, 0.3 / S, 0.45);
-  if (p1 > 0) headline(ctx, 'Straight through. On the record.', H * 0.18, 48, INK, Math.min(1, p1));
-  // three linked cards
-  const cardsArr = [['INTAKE', 'verified data'], ['SYSTEMS', 'CRM · portfolio · compliance'], ['BOOKS', 'posted, one trail']];
+  if (p1 > 0) headline(ctx, 'The repetitive part runs by itself.', H * 0.18, 50, INK, Math.min(1, p1));
+  const cardsArr = [['ORDER IN', 'logged once'], ['INVOICE', 'sent, GST ready'], ['REMINDER', 'scheduled']];
   cardsArr.forEach(([h, s], i) => {
-    const p = pop(t, (1.2 + i * 0.8) / S, 0.35);
+    const p = pop(t, (1.1 + i * 0.8) / S, 0.35);
     if (p <= 0) return;
-    const x = W * 0.5 - 420 + i * 300, y = H * 0.4;
+    const x = W * 0.5 - 425 + i * 300, y = H * 0.36;
     ctx.globalAlpha = Math.min(1, p);
-    card(ctx, x, y, 250, 150, i === 2 ? INK : '#fdfcf6', 14);
+    card(ctx, x, y, 250, 150, i === 2 ? INK : '#ffffff', 14);
     ctx.fillStyle = i === 2 ? CREAM : INK;
-    ctx.font = '700 26px Manrope, Arial, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(h, x + 24, y + 48);
-    ctx.font = '500 18px Manrope, Arial, sans-serif';
+    ctx.font = '700 26px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(h, x + 24, y + 56);
+    ctx.font = '500 19px Avenir Next, Arial, sans-serif';
     ctx.fillStyle = i === 2 ? withAlpha(CREAM, 0.8) : withAlpha(INK, 0.65);
-    ctx.fillText(s, x + 24, y + 82);
+    ctx.fillText(s, x + 24, y + 92);
     ctx.globalAlpha = 1;
-    if (i < 2) {
-      dot(ctx, x + 280, y + 75, 8, GOOD);
-    }
+    if (i < 2) dot(ctx, x + 275, y + 75, 8, GOOD);
   });
-  // exception routes politely
-  const ep = pop(t, 4.2 / S, 0.35);
+  const ep = pop(t, 4.0 / S, 0.35);
   if (ep > 0) {
     ctx.globalAlpha = Math.min(1, ep);
-    card(ctx, W * 0.5 - 230, H * 0.66, 460, 60, ACCENT, 30);
-    ctx.fillStyle = '#fff'; ctx.font = '700 22px Manrope, Arial, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('exceptions reach a human, calmly', W / 2, H * 0.66 + 38);
+    const chip = ctx.createLinearGradient(W * 0.5 - 230, 0, W * 0.5 + 230, 0);
+    chip.addColorStop(0, EMERALD); chip.addColorStop(1, AMBER);
+    card(ctx, W * 0.5 - 230, H * 0.63, 460, 60, chip, 30);
+    ctx.fillStyle = INK; ctx.font = '700 22px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('AI helps. You decide.', W / 2, H * 0.63 + 38);
     ctx.globalAlpha = 1;
   }
-  const p2 = pop(t, 6.0 / S, 0.4);
-  if (p2 > 0) subline(ctx, 'no rekeying, no blind spots, no month-end surprises.', H * 0.84, 28, withAlpha(INK, 0.65), Math.min(1, p2));
+  const p2 = pop(t, 5.3 / S, 0.4);
+  if (p2 > 0) subline(ctx, 'no copy and paste, no chasing, no month-end surprises.', H * 0.84, 28, withAlpha(INK, 0.65), Math.min(1, p2));
   grain(ctx, frameIndex, false);
 }
 
-// S11 numbers: the before/after, calm and undeniable
-function drawNumbers(ctx, scene, t, frameIndex) {
+// build: the solutions listed on the homepage, calm and plain
+function drawBuild(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
   ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
   const p0 = pop(t, 0.3 / S, 0.4);
-  if (p0 > 0) headline(ctx, 'What changes.', H * 0.18, 60, INK, Math.min(1, p0));
-  const stats = [
-    ['NIGOs', '25% -> under 2%'],
-    ['Onboarding', '90 days -> days'],
-    ['The work', 'handled straight-through'],
-    ['Decisions', 'one auditable trail'],
+  if (p0 > 0) headline(ctx, 'What we build.', H * 0.18, 62, INK, Math.min(1, p0));
+  const rows = [
+    ['ERP & inventory', 'one system for the business'],
+    ['E-invoicing & GST', 'right the first time'],
+    ['Accounts & CA', 'less typing, cleaner books'],
+    ['Data & governed AI', 'answers you can check'],
   ];
-  stats.forEach(([big, small], i) => {
-    const p = pop(t, (1.2 + i * 1.1) / S, 0.4);
+  rows.forEach(([big, small], i) => {
+    const p = pop(t, (1.1 + i * 1.0) / S, 0.4);
     if (p <= 0) return;
-    const y = H * 0.38 + i * 100;
+    const y = H * 0.36 + i * 100;
     ctx.globalAlpha = Math.min(1, p);
     ctx.textAlign = 'left';
     ctx.fillStyle = INK;
-    ctx.font = 'bold 50px Georgia, serif';
-    ctx.fillText(big, W * 0.2, y);
+    ctx.font = '800 44px Avenir Next, Arial, sans-serif';
+    ctx.fillText(big, W * 0.16, y);
     ctx.fillStyle = ACCENT;
-    ctx.font = '600 36px Manrope, Arial, sans-serif';
+    ctx.font = '600 30px Avenir Next, Arial, sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(small, W * 0.8, y);
+    ctx.fillText(small, W * 0.84, y);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = withAlpha(INK, 0.25); ctx.fillRect(W * 0.2, y + 20, W * 0.6, 1);
+    ctx.fillStyle = withAlpha(INK, 0.25); ctx.fillRect(W * 0.16, y + 22, W * 0.68, 1);
   });
-  const p2 = pop(t, 6.6 / S, 0.4);
-  if (p2 > 0) subline(ctx, 'the numbers every wealth firm is chasing.', H * 0.88, 26, withAlpha(INK, 0.55), Math.min(1, p2));
+  const p2 = pop(t, 5.8 / S, 0.4);
+  if (p2 > 0) subline(ctx, 'built around how small and medium businesses really work.', H * 0.88, 26, withAlpha(INK, 0.6), Math.min(1, p2));
   grain(ctx, frameIndex, false);
 }
 
-// S12 close: brand, then the exciting COMING SOON with rising build
+// close: site black, brand mark, then COMING SOON in the site gradient
 function drawClose(ctx, scene, t, frameIndex) {
   const S = scene.seconds;
-  ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, W, H);
   const a = fadeInOut(t, 0.08, 0.04);
   ctx.globalAlpha = a;
+  const brand = ctx.createLinearGradient(W / 2 - 440, 0, W / 2 + 440, 0);
+  brand.addColorStop(0, EMERALD); brand.addColorStop(0.75, AMBER); brand.addColorStop(1, '#fb923c');
   // brand mark
-  ctx.fillStyle = CREAM;
-  ctx.beginPath(); ctx.roundRect(W / 2 - 44, H * 0.11, 88, 88, 24); ctx.fill();
-  ctx.fillStyle = INK; ctx.font = 'bold 56px Georgia, serif'; ctx.textAlign = 'center';
-  ctx.fillText('k', W / 2 - 6, H * 0.11 + 63);
-  ctx.fillStyle = ACCENT;
-  ctx.beginPath(); ctx.arc(W / 2 + 16, H * 0.11 + 53, 5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = CREAM; ctx.font = 'bold 42px Georgia, serif';
-  ctx.fillText('Kapkoti Solution', W / 2, H * 0.11 + 158);
-  subline(ctx, 'One pipeline for the work that falls between your systems.', H * 0.11 + 200, 26, withAlpha(CREAM, 0.85));
-  // COMING SOON: big, pulsing, energised
-  const cp = pop(t, 2.2 / S, 0.55);
+  const mark = ctx.createLinearGradient(W / 2 - 44, H * 0.1, W / 2 + 44, H * 0.1 + 88);
+  mark.addColorStop(0, EMERALD); mark.addColorStop(1, AMBER);
+  ctx.fillStyle = mark;
+  ctx.beginPath(); ctx.roundRect(W / 2 - 44, H * 0.1, 88, 88, 24); ctx.fill();
+  ctx.fillStyle = '#03251a'; ctx.font = 'bold 60px Georgia, serif'; ctx.textAlign = 'center';
+  ctx.fillText('k', W / 2, H * 0.1 + 64);
+  ctx.fillStyle = CREAM; ctx.font = '800 44px Avenir Next, Arial, sans-serif';
+  ctx.fillText('kapkoti solution', W / 2, H * 0.1 + 152);
+  subline(ctx, 'We solve everyday business problems.', H * 0.1 + 196, 26, withAlpha(CREAM, 0.8), a);
+  // COMING SOON: big, pulsing, in the site gradient
+  const cp = pop(t, 2.0 / S, 0.55);
   if (cp > 0) {
-    const pulse = 1 + 0.03 * Math.sin(t * Math.PI * 2 * 2.2);
+    const pulse = 1 + 0.02 * Math.sin(t * Math.PI * 2 * 2.2);
     ctx.save();
     ctx.translate(W / 2, H * 0.6);
     ctx.scale(pulse * cp, pulse * cp);
-    const v = ctx.createLinearGradient(-480, 0, 480, 0);
-    v.addColorStop(0, ACCENT); v.addColorStop(0.5, CREAM); v.addColorStop(1, ACCENT);
-    ctx.fillStyle = v;
-    ctx.font = 'bold 138px Georgia, serif'; ctx.textAlign = 'center';
-    ctx.fillText('COMING SOON', 0, 44);
+    ctx.translate(-W / 2, 0);
+    ctx.fillStyle = brand;
+    ctx.font = '800 132px Avenir Next, Arial, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('COMING SOON', W / 2, 44);
     ctx.restore();
     // sparkle diamonds orbiting the words (drawn, not glyphs: no tofu)
     for (let i = 0; i < 8; i++) {
       const ang = t * 0.9 + i * Math.PI / 4;
-      const sx = W / 2 + Math.cos(ang) * 620;
+      const sx = W / 2 + Math.cos(ang) * 600;
       const sy = H * 0.6 + Math.sin(ang) * 130;
-      const r = 8 + 4 * Math.sin(t * 5 + i * 2);
-      ctx.globalAlpha = (0.35 + 0.3 * Math.sin(t * 5 + i * 2)) * cp;
-      ctx.fillStyle = i % 2 ? ACCENT : CREAM;
+      const r = 7 + 3 * Math.sin(t * 5 + i * 2);
+      ctx.globalAlpha = (0.35 + 0.3 * Math.sin(t * 5 + i * 2)) * cp * a;
+      ctx.fillStyle = i % 2 ? AMBER : EMERALD;
       ctx.beginPath();
       ctx.moveTo(sx, sy - r * 1.6); ctx.lineTo(sx + r, sy); ctx.lineTo(sx, sy + r * 1.6); ctx.lineTo(sx - r, sy);
       ctx.closePath(); ctx.fill();
-      ctx.globalAlpha = 1;
     }
   }
-  subline(ctx, 'the client pipeline for wealth firms · onboarding, KYC and everything after', H * 0.8, 24, withAlpha(CREAM, 0.75), clamp01((t - 4.2 / S) / 0.4));
-  subline(ctx, 'www.kapkotisolution.com', H * 0.88, 28, ACCENT, clamp01((t - 5.0 / S) / 0.4));
+  subline(ctx, 'ERP \u00b7 e-invoicing \u00b7 accounts \u00b7 data \u00b7 automation \u00b7 governed AI', H * 0.8, 26, withAlpha(CREAM, 0.75), a * clamp01((t - 3.8 / S) / 0.4));
+  subline(ctx, 'Tell us what you wish was easier \u00b7 kapkotisolution.com', H * 0.88, 28, AMBER, a * clamp01((t - 4.6 / S) / 0.4));
   ctx.globalAlpha = 1;
   grain(ctx, frameIndex, true);
 }
@@ -654,8 +603,8 @@ for (const scene of scenes) {
 console.log('Encoding video with ffmpeg…');
 const SILENT_MP4 = join(ROOT, '.cache', 'video-silent.mp4');
 execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(FRAMES_DIR, 'f%05d.png'),
-  '-vf', `scale=2560:1440:flags=lanczos`,
-  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '17', '-preset', 'slow', '-movflags', '+faststart', SILENT_MP4]);
+  '-vf', `scale=1920:1080:flags=lanczos`,
+  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-preset', 'slow', '-movflags', '+faststart', SILENT_MP4]);
 
 // teaser: 6-second montage cut from the film's best moments (muted hero loop)
 console.log('Cutting teaser…');
@@ -670,16 +619,16 @@ const take = (fromS, toS) => {
     teaserCount++;
   }
 };
-// scene starts: hook 0, packet 7, chase 15, retype 23, clock 31, turn 39, reveal 44,
-//               intake 49, verify 57, flow 65, numbers 73, close 82 (end 92)
-take(2.7, 3.9);    // hook: dot lands, title
-take(13.9, 15.1);  // packet: the reject stamp
-take(43.4, 44.6);  // turn: white flash
-take(60.9, 62.1);  // verify: signature check
-take(87.4, 88.6);  // close: COMING SOON pop
+// scene starts: hook 0, billing 6, stock 13, chase 20, turn 27, reveal 32,
+//               invoice 37, data 44, flow 51, build 58, close 66 (end 75)
+take(1.5, 2.7);    // hook: dot lands, title
+take(10.4, 11.6);  // billing: the mismatch stamp
+take(31.4, 32.6);  // turn: white flash
+take(47.4, 48.6);  // data: answer bars grow
+take(69.4, 70.6);  // close: COMING SOON pop
 execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(TEASER_FRAMES, 't%05d.png'),
-  '-vf', 'scale=2560:1440:flags=lanczos',
-  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '17', '-preset', 'slow', '-movflags', '+faststart', TEASER_MP4]);
+  '-vf', 'scale=1920:1080:flags=lanczos',
+  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', '-preset', 'slow', '-movflags', '+faststart', TEASER_MP4]);
 
 console.log('Synthesising soundtrack…');
 const AUDIO_WAV = join(ROOT, '.cache', 'audio.wav');
@@ -697,7 +646,7 @@ ctx2.scale(SS, SS);
 const closeScene = scenes.find(s => s.name === 'close');
 ctx2.save(); applyCamera(ctx2, closeScene, 0.55); closeScene.draw(ctx2, closeScene, 0.75, 0); ctx2.restore();
 writeFileSync(join(ROOT, '.cache', 'poster.png'), canvas2.toBuffer('image/png'));
-execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', join(ROOT, '.cache', 'poster.png'), '-q:v', '2', join(ROOT, 'public', 'media', 'poster.jpg')]);
+execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', join(ROOT, '.cache', 'poster.png'), '-q:v', '2', join(ROOT, 'media', 'poster.jpg')]);
 
 // ---------- soundtrack ----------
 
