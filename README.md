@@ -17,6 +17,10 @@ pnpm dev
 
 AI calls use OpenRouter from the Cloudflare Worker. Add the API key with `pnpm exec wrangler secret put OPENROUTER_API_KEY`. The website intentionally points to the deployed API; use unit tests for isolated local intake tests. Never submit real visitor information during testing.
 
+## The 3D scroll story
+
+The hero sits on a three-scene 3D story (evening shop, messy night, tidy morning) drawn with three.js. Edit `scene/story.js`, then run `pnpm build:story` to regenerate the bundled `story.js` at the root; commit both. The chapters are plain HTML scrolling over a sticky canvas, so the text still reads without WebGL or JavaScript.
+
 ## Deploy
 
 1. Apply migrations: `pnpm exec wrangler d1 migrations apply kapkoti-intake --remote`.
