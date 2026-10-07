@@ -18,6 +18,23 @@ let submission = null;
 let savedBrief = '';
 $('year').textContent = String(new Date().getFullYear());
 
+// Hero headline: deletes the current word, then types the next one. The first
+// word must match the text already in #typed.
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const words = ['billing', 'stock counts', 'GST returns', 'messy data', 'busywork'];
+  let index = 0;
+  let length = words[0].length;
+  let direction = -1;
+  let pause = 20;
+  setInterval(() => {
+    if (pause > 0) { pause -= 1; return; }
+    length += direction;
+    $('typed').textContent = words[index].slice(0, length);
+    if (length === 0) { index = (index + 1) % words.length; direction = 1; }
+    else if (length === words[index].length) { direction = -1; pause = 20; }
+  }, 80);
+}
+
 function setBusy(value, status = '') {
   busy = value;
   $('chat-status').textContent = status;
