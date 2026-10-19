@@ -4,5 +4,5 @@
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cp "$ROOT/index.html" "$ROOT/style.css" "$ROOT/app.js" "$ROOT/story.js" "$ROOT/_headers" "$ROOT/CNAME" "$ROOT/public/"
-cp "$ROOT/media/poster.jpg" "$ROOT/media/teaser.mp4" "$ROOT/media/workflow.mp4" "$ROOT/public/media/"
+cp "$ROOT/media/poster.jpg" "$ROOT/media/teaser.mp4" "$ROOT/media/workflow.mp4" "$ROOT/media/reel.mp4" "$ROOT/media/reel-poster.jpg" "$ROOT/public/media/"
 echo "public/ synced from root site files."

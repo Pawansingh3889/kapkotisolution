@@ -118,6 +118,9 @@ h3{font-size:22px}
 .idea-cloud button,.starters button{min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:99px;background:var(--card);color:#dfe3d6;font-size:14px}
 .idea-cloud button:hover,.starters button:hover{border-color:var(--em);color:var(--em)}
 .how-video{margin:0}
+.how-media{display:grid;gap:24px;align-items:start}
+.how-media video[height="1280"]{max-width:min(100%,360px);margin-inline:auto}
+@media (min-width:760px){.how-media{grid-template-columns:3.16fr 1fr}}
 .how-video video{width:100%;height:auto;display:block;border-radius:16px;border:1px solid var(--line);background:#1a2e25}
 .how-video figcaption{font-size:12px;color:var(--muted);margin-top:12px;text-align:center}
 .governance-grid{margin-bottom:24px}
