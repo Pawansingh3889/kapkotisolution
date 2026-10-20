@@ -11,6 +11,7 @@ let html = await readFile('index.html', 'utf8');
 for (const entry of ['app', 'ui']) {
   const output = Object.entries(result.metafile.outputs).find(([, info]) => info.entryPoint === `${entry}.ts`);
   if (!output) throw new Error(`Missing client bundle: ${entry}`);
+  if (!html.includes(`/assets/${entry}.js`)) throw new Error(`index.html has no /assets/${entry}.js script tag`);
   html = html.replace(`/assets/${entry}.js`, `/${output[0]}`);
 }
 await writeFile('assets/index.html', html);

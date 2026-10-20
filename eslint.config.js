@@ -1,5 +1,5 @@
 export default [{
-  files: ['**/*.js'],
+  files: ['**/*.js', '**/*.mjs'],
   languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: Object.fromEntries([
     'HTMLElement', 'HTMLDetailsElement', 'HTMLAnchorElement', 'HTMLInputElement', 'HTMLTextAreaElement', 'HTMLSelectElement', 'document', 'window', 'fetch', 'AbortSignal', 'crypto', 'Blob', 'URL', 'setTimeout', 'setInterval',
     'matchMedia', 'Request', 'Response', 'Headers', 'TextEncoder', 'TextDecoder', 'console'

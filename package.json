@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "lint": "eslint worker.js tests/*.test.js && tsc --noEmit",
+    "lint": "eslint worker.js tests/*.test.js scripts/build-client.mjs",
     "typecheck": "tsc --noEmit && tsc --ignoreConfig --noEmit --allowJs --checkJs --strict false --target es2022 --module esnext --lib es2023,dom,dom.iterable worker.js",
     "build:client": "node scripts/build-client.mjs",
     "build:site": "pnpm build:client && sh scripts/sync-site.sh",

@@ -1,9 +1,5 @@
+import { element } from './dom';
 const API = 'https://kapkoti-solution.pawankapkoti3889.workers.dev/api';
-function element<T extends HTMLElement>(id: string, type: { new(): T }): T {
-  const node = document.getElementById(id);
-  if (!(node instanceof type)) throw new Error(`Missing required element: ${id}`);
-  return node;
-}
 const $ = (id: string) => element(id, HTMLElement);
 const fields = {
   message: element('message', HTMLTextAreaElement), brief: element('brief', HTMLTextAreaElement),

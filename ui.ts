@@ -1,13 +1,8 @@
 import type { SystemScene } from './scene/system';
-
-function required<T extends HTMLElement>(id: string, type: { new(): T }): T {
-  const node = document.getElementById(id);
-  if (!(node instanceof type)) throw new Error(`Missing interface element: ${id}`);
-  return node;
-}
+import { element as required } from './dom';
 
 const stage = required('system-stage', HTMLElement);
-const canvas = required('scene', HTMLCanvasElement);
+let canvas = required('scene', HTMLCanvasElement);
 const sceneStatus = required('scene-status', HTMLElement);
 const loadButton = required('scene-load', HTMLButtonElement);
 const pauseButton = required('scene-toggle', HTMLButtonElement);
@@ -20,6 +15,8 @@ let scene: SystemScene | null = null;
 let loading = false;
 let paused = false;
 let disposed = false;
+let staticView = false;
+const STATIC_STATUS = 'Static system view. All capabilities remain available below.';
 
 function selectService(index: number) {
   const name = serviceNames[index];
@@ -31,7 +28,7 @@ function selectService(index: number) {
     button.classList.toggle('active', active);
   });
   panels.forEach((panel, panelIndex) => { panel.hidden = panelIndex !== index; });
-  sceneStatus.textContent = `${name}. Connected to the whole.`;
+  sceneStatus.textContent = staticView ? STATIC_STATUS : `${name}. Connected to the whole.`;
   scene?.setState(index);
 }
 choices.forEach((button) => button.addEventListener('click', () => {
@@ -44,18 +41,35 @@ document.querySelectorAll<HTMLElement>('.service-list, .scene-controls, .product
 
 stage.addEventListener('scene-ready', () => {
   stage.classList.add('ready');
+  staticView = false;
+  sceneStatus.textContent = `${serviceNames[selected]}. Connected to the whole.`;
   pauseButton.hidden = reduced.matches;
   loadButton.hidden = true;
 });
 stage.addEventListener('scene-error', () => {
   stage.classList.remove('ready');
   pauseButton.hidden = true;
-  sceneStatus.textContent = 'Static system view. All capabilities remain available below.';
+  showStatic();
 });
 
+function showStatic() {
+  staticView = true;
+  sceneStatus.textContent = STATIC_STATUS;
+  loadButton.hidden = false;
+  loadButton.textContent = 'Retry 3D view';
+}
+
 async function loadScene() {
-  if (scene || loading || disposed) return;
+  if ((scene && !staticView) || loading || disposed) return;
   loading = true;
+  if (scene) {
+    // A lost WebGL context cannot be reused, so retry on a fresh canvas.
+    scene.dispose();
+    scene = null;
+    const fresh = canvas.cloneNode() as HTMLCanvasElement;
+    canvas.replaceWith(fresh);
+    canvas = fresh;
+  }
   loadButton.disabled = true;
   loadButton.textContent = 'Opening 3D…';
   try {
@@ -67,9 +81,7 @@ async function loadScene() {
   } catch {
     canvas.hidden = true;
     stage.classList.remove('ready');
-    sceneStatus.textContent = 'Static system view. All capabilities remain available below.';
-    loadButton.hidden = false;
-    loadButton.textContent = 'Retry 3D view';
+    showStatic();
   } finally {
     loading = false;
     loadButton.disabled = false;
