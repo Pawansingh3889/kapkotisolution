@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /design-review/
+Sitemap: https://kapkotisolution.com/sitemap.xml
