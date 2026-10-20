@@ -1,8 +1,13 @@
 #!/bin/sh
-# Copies the Pages site files (repo root) into public/ so the Worker preview and
-# `wrangler deploy` always ship the same content. Run before deploying: pnpm deploy does this.
+# Package only public website assets; originals and review documents stay in the repository.
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cp "$ROOT/index.html" "$ROOT/style.css" "$ROOT/app.js" "$ROOT/story.js" "$ROOT/_headers" "$ROOT/CNAME" "$ROOT/public/"
-cp "$ROOT/media/poster.jpg" "$ROOT/media/teaser.mp4" "$ROOT/media/workflow.mp4" "$ROOT/media/reel.mp4" "$ROOT/media/reel-poster.jpg" "$ROOT/public/media/"
-echo "public/ synced from root site files."
+DEST="$ROOT/dist/site"
+rm -rf "$DEST"
+mkdir -p "$DEST/assets" "$DEST/media"
+cp "$ROOT/assets/index.html" "$ROOT/style.css" "$ROOT/_headers" "$ROOT/CNAME" "$ROOT/robots.txt" "$ROOT/sitemap.xml" "$DEST/"
+cp "$ROOT"/assets/*.js "$DEST/assets/"
+for file in character-short.mp4 reel-poster.jpg system-poster.jpg rigel-dashboard.jpg rigel-stock.jpg rigel-assistant.jpg favicon.svg social-card.png; do
+  cp "$ROOT/media/$file" "$DEST/media/"
+done
+printf 'Static artifact built in dist/site.\n'

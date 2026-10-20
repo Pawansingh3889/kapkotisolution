@@ -1,10 +1,12 @@
 # Kapkoti Solution
 
-A personal product studio website: governed AI, UK business products, Indian SME discovery and future hardware experiments. Static HTML/CSS/JS on GitHub Pages, with a Cloudflare Worker providing real English/Hindi AI conversations and private problem intake. The Worker also serves the site as a deployment preview.
+A technology studio website for ERP, custom software, governed AI, data, integrations, and cloud architecture. The approved redesign direction, The Operating System, pairs a yellow character with a dark connected-system interface. Static HTML/CSS and strict TypeScript browser sources build into `dist/site/`; a Cloudflare Worker provides English/Hindi AI conversations and private problem intake using the existing D1 database.
+
+The redesign is implemented locally and has not been deployed. The custom domain still serves the baseline GitHub Pages site. See `QA_REPORT.md` for tested behavior and outstanding browser/device checks.
 
 ## Work locally
 
-Node 22.13+ (built-in SQLite is used in the tests), pnpm and Cloudflare access are required.
+Node 22.13+ (built-in SQLite is used in the tests) and pnpm are required. Cloudflare account access is needed for remote database operations and deployment, not for the mocked unit suite.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -17,18 +19,44 @@ pnpm dev
 
 AI calls use OpenRouter from the Cloudflare Worker. Add the API key with `pnpm exec wrangler secret put OPENROUTER_API_KEY`. The website intentionally points to the deployed API; use unit tests for isolated local intake tests. Never submit real visitor information during testing.
 
-## The 3D scroll story
+For a static preview, run `pnpm build:site`, then serve `dist/site/` with a local HTTP server. `pnpm dev` builds the same artifact before starting Wrangler. Rebuild after changing source files; this setup does not include a separate TypeScript watch process. Do not serve the repository root as the production artifact.
 
-The hero sits on a three-scene 3D story (evening shop, messy night, tidy morning) drawn with three.js. Edit `scene/story.js`, then run `pnpm build:story` to regenerate the bundled `story.js` at the root; commit both. The chapters are plain HTML scrolling over a sticky canvas, so the text still reads without WebGL or JavaScript.
+## Frontend sources and build output
 
-## Deploy
+| Source | Responsibility |
+| --- | --- |
+| `index.html`, `style.css` | Crawlable content, design tokens, responsive layout, navigation, inquiry markup |
+| `app.ts` | AI chat, manual/reviewed brief, consent, submission recovery, confirmation, download |
+| `ui.ts` | Service and Rigel screenshot controls, optional scene loading, film visibility handling |
+| `scene/system.ts`, `scene/character.ts`, `scene/workflow.ts` | Procedural character and connected systems, rendering policy, disposal and fallback |
+| `media/character-short.mp4` | Separate 23-second character edit used by the redesigned page |
+| `scripts/build-client.mjs` | Compiles browser entries and splits the optional scene bundle into ignored `assets/` |
+| `scripts/sync-site.sh` | Recreates ignored `dist/site/` from the selected public files and media |
+
+The hero starts with a static image and readable HTML. Desktop pointer interaction or the explicit 3D control loads the scene. Mobile, reduced-motion, and data-saving users are not automatically given the full scene. Ordinary service controls and contact remain available independently of WebGL. See `THREE_D_ARCHITECTURE.md` for scene lifecycle details.
+
+`pnpm build:client` compiles TypeScript into `assets/`. `pnpm build:site` also packages `dist/site/`. `pnpm build` first runs type checks, then builds that artifact and performs a Wrangler dry run. Lint and tests remain separate required checks. `wrangler.jsonc` serves `dist/site/` for preview and the next explicitly approved Worker deployment.
+
+Do not edit or commit generated `assets/` or `dist/`. Root `app.js`, `story.js`, `scene/story.js`, and `public/` are retained baseline artifacts and are not inputs to the redesigned page. The old `build:story` and `video` commands concern the baseline shop scene and landscape film, not the new character scene or short edit. Original `media/reel.mp4`, `media/workflow.mp4`, and their posters remain recoverable in the repository; the release packaging includes only the selected short film and current artwork.
+
+## Deployment and release approval
+
+No deployment is authorized by local build or QA. Before publishing, approve the reviewed `dist/site/` artifact and the hosting path, then complete the remaining checks in `QA_REPORT.md`.
+
+The current custom domain uses GitHub Pages branch-root publishing. The redesigned HTML needs compiled bundles that are deliberately ignored in Git. It must therefore be published from the built artifact; merging source into the existing branch-root publishing setup without changing that release path would leave required bundles unavailable. `.github/workflows/pages-preview.yml` is manual-only and uploads a review artifact. It does not deploy Pages, change repository hosting settings, or publish the Worker.
+
+The existing GitHub Pages response does not serve the security headers in `_headers`. Verify header enforcement as part of the approved deployment approach, and check the actual custom domain after release. A passing local build or Worker preview does not verify that domain.
+
+For a separately approved Worker release:
 
 1. Apply migrations: `pnpm exec wrangler d1 migrations apply kapkoti-intake --remote`.
 2. Set `OPENROUTER_API_KEY` and `RATE_LIMIT_SALT` with `pnpm exec wrangler secret put OPENROUTER_API_KEY` and `pnpm exec wrangler secret put RATE_LIMIT_SALT`. Do not commit or expose either secret. Wrangler stores deployment credentials in its own authenticated configuration; permanent credential backups belong in the password store.
 3. Publish the Worker and preview assets with `pnpm run deploy`.
-4. GitHub Pages publishes the repository root from the `main` branch; `index.html`, `style.css`, `app.js` and `media/` live at the root. `CNAME` pins the custom domain. `public/` is a Worker-only copy generated by `scripts/sync-site.sh` (run automatically by `pnpm deploy`); never edit `public/` directly, edit the root files instead.
+4. Verify the Worker preview and its asset responses. Publishing the Worker does not itself update the currently branch-published GitHub Pages custom domain. `CNAME` is retained in the static artifact for the eventual approved domain configuration.
 
-The browser API endpoint is in `public/app.js`. The AI provider is OpenRouter, model `openai/gpt-4o-mini`. API payloads are capped at 65 KB, with up to 10 exchanges, 30 AI requests per hashed network address per day, 5 submission requests per address per day, and 300 total AI requests per day. Multiple visitors on a shared network share the address limit. Raising limits may increase usage costs.
+The browser API endpoint is in `app.ts`. The AI provider is OpenRouter, model `openai/gpt-4o-mini`. API payloads are capped at 65 KB, with up to 10 exchanges, 30 AI requests per hashed network address per day, 5 submission requests per address per day, and 300 total AI requests per day. Multiple visitors on a shared network share the address limit. Raising limits may increase usage costs.
+
+The redesign requires no database schema change. Retain the existing migrations and do not reset D1 data for a visual deployment or rollback. Recovery baseline: `ddc5c56`.
 
 ## Email submitted briefs to Pawan
 
