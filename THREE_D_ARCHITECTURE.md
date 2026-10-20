@@ -36,7 +36,7 @@ The canvas emits bubbling `scene-ready` and `scene-error` events. `ui.ts` toggle
 
 ## Loading policy
 
-`media/system-poster.jpg` occupies a reserved-size stage from first paint. Three.js sits behind a dynamic import and is excluded from the initial browser entry bundles.
+`media/system-poster.webp` occupies a reserved-size stage from first paint. Three.js sits behind a dynamic import and is excluded from the initial browser entry bundles.
 
 Intent triggers are the "Explore in 3D" button, a hero ERP/AI/Data choice, or pointer entry on an eligible desktop viewport of at least 900 px. Pointer entry is registered only when reduced motion and the available save-data hint are off. Capability choices below the hero update HTML without forcing a scene download; they also update an already loaded scene.
 
