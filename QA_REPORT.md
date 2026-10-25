@@ -1,8 +1,16 @@
 # QA and deployment readiness
 
-Reviewed 25 October 2026 on `feat/ai-engineering-website`. Baseline source revision: `d87692a`. The redesign and plain-language revision are on this feature branch. No publication, production enquiry, paid model request, database migration/reset or secret change occurred.
+Reviewed 25 October 2026 on `feat/ai-engineering-website`. Baseline source revision: `d87692a`. The redesign and plain-language revision are on this feature branch. The initial redesign (`b46626f`) was deployed after explicit user authorization as Cloudflare version `ad23e801-ba14-4b5b-b461-d39a5c0b1480`. No production enquiry, paid model request, database migration/reset or secret change occurred.
 
-## Current presentation
+## Service hierarchy revision
+
+The user then requested named service tabs and a visible hierarchy, referencing ATS Global. Services now opens with three groups and nine accessible tabs. Each panel gives a plain definition, an illustrative business example, an optional scope disclosure, current availability and a contact action. Architecture, model methods, hosting and governance are in a closed reference section below. All three explorers retain independent selections when unrelated fragments change.
+
+Latest checks: 23 tests, lint, type checking and the production dry-run build passed. Chrome covered every service at 320, 390, 768, 1024 and 1440 pixels with its scope both closed and open: 90 states, no horizontal overflow, exactly one active panel and one tab stop. The 65 route/width checks were repeated without overflow or observed failed loaded images. End/ArrowDown keyboard behavior and direct service links were exercised.
+
+Lighthouse 13.5.0 on the final local Services page: performance 99, accessibility 100, best practices 100, SEO 100. Mobile lab metrics: FCP 1.08 seconds, LCP 1.23 seconds, TBT 0 ms, CLS 0.0533. These are simulated local results, not field data. Evidence uses the `hierarchy-` prefix in `.cache/qa/`. The hierarchy artifact manifest SHA-256 is `d18656e62986406c87a867ea421799d0832de13997053b4cd39636c7bf41d326`. Older `simple-` evidence below belongs to the preceding presentation.
+
+## Previous presentation review
 
 The navigation labels were subsequently changed to How We Help and Services, with the detailed-page heading “AI services. Built around your needs.” Routes and fragments were preserved. Tests, lint, type checking and the build passed again. The browser matrix, Lighthouse results and screenshots below document the preceding presentation with the Technical Details label; they were not repeated for this wording change.
 
@@ -56,7 +64,7 @@ Final mobile home metrics: FCP 1.07 seconds, LCP 1.14 seconds, total blocking ti
 
 ## Evidence and reproduction
 
-Ignored evidence is in `.cache/qa/`: `simple-home-desktop.jpg`, `simple-home-mobile.jpg`, `simple-contact-mobile.jpg`, the 65-row responsive matrix, 16 explorer checks, five `simple-lighthouse-*.json` reports and `simple-artifact-manifest.sha256`. Earlier evidence without the `simple-` prefix belongs to the previous presentation. The current artifact manifest SHA-256 is `3580e4fe8ba9ff0c7e8d6a875e646d141bfe2b2224cbb341d86107385a029598`.
+Ignored evidence is in `.cache/qa/`: `simple-home-desktop.jpg`, `simple-home-mobile.jpg`, `simple-contact-mobile.jpg`, the 65-row responsive matrix, 16 explorer checks, five `simple-lighthouse-*.json` reports and `simple-artifact-manifest.sha256`. Earlier evidence without the `simple-` prefix belongs to the previous presentation. The preceding presentation’s artifact manifest SHA-256 is `3580e4fe8ba9ff0c7e8d6a875e646d141bfe2b2224cbb341d86107385a029598`.
 
 Use `pnpm dev` for a fresh preview. It builds first and uses the local compatibility date `2026-09-22`: the installed workerd cannot start with production date `2026-09-27`. Production configuration was preserved. An initial restart encountered a local SQLite lock; final browser checks used isolated temporary preview storage. No existing local or production database was reset. Stop the preview before a separate production dry-run build, then restart it to refresh the asset manifest. Owned preview processes are stopped after review.
 

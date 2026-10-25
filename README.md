@@ -17,6 +17,8 @@ pnpm dev
 
 The browser intentionally uses the existing deployed intake API. Localhost is not an allowed submission origin. Do not send real or synthetic enquiries to production during QA: unit tests mock model/email providers and use an in-memory database. A static preview can also serve `dist/site/`; never serve the repository root as the production artifact. Restart `pnpm dev` after editing sources; there is no separate source watch process. Stop the preview before a separate production dry-run build: packaging recreates the asset directory, and the installed local runtime can retain a stale asset manifest until restarted.
 
+Services opens on a three-group hierarchy with nine accessible service tabs. Definitions and illustrative examples come first; scope disclosures and the technical reference are optional. All service text remains in static HTML for visitors without JavaScript.
+
 The navigation labels are How We Help (`/services/`) and Services (`/technology/`). Existing routes and fragments are preserved when renaming these labels.
 
 ## Source and build boundaries
@@ -27,7 +29,7 @@ The navigation labels are How We Help (`/services/`) and Services (`/technology/
 | `pages/*.html` | Inner-page body fragments, contact and privacy |
 | `templates/layout.html` | Shared document head, navigation and footer |
 | `templates/solution.html` | Shared project-detail layout |
-| `content.mjs` | Business needs, engineering services, stages, architecture layers, projects and industries |
+| `content.mjs` | Business needs, service groups and definitions, stages, architecture layers, projects and industries |
 | `scripts/render-site.mjs` | Route registry, escaped content components, metadata, structured data and sitemap |
 | `style.css` | Responsive layout, light/dark tokens, components and reduced-motion rules |
 | `theme.ts` | Small blocking preference initializer that avoids a theme flash |
@@ -75,7 +77,7 @@ The assistant cannot execute business actions, query saved enquiries or send ema
 
 The custom domain was observed serving the current Cloudflare asset/header configuration during the audit. The previous README's branch-root GitHub Pages description was stale. `wrangler.jsonc` declares the domain routes and asset directory; `pnpm build` is a dry run and does not publish.
 
-The GitHub workflow runs quality/build checks on pull requests or manual dispatch and uploads `dist/site/`. It never deploys. Inspect the exact artifact, hosting configuration and API configuration before an explicitly authorized release. This task prepared deployment readiness; it did not publish.
+The GitHub workflow runs quality/build checks on pull requests or manual dispatch and uploads `dist/site/`. It never deploys. Inspect the exact artifact, hosting configuration and API configuration before an explicitly authorized release. The initial redesign at `b46626f` was deployed after explicit user authorization. Deployment records are kept under ignored `.cache/releases/`; later changes still require the checks below.
 
 For an authorized release, run the required checks, record the source revision and retain the prior complete built artifact. Publish the Worker and all generated assets together through the existing `pnpm run deploy` path. No new migration or secret change is required by this redesign. On the real domain, verify main/inner routes, 404 status, metadata, asset loading, security headers, consent and the intake path with an appropriate controlled verification plan.
 

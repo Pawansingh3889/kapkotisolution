@@ -46,6 +46,10 @@ The resulting focus is practical AI engineering for businesses with existing sys
 
 The user found the first expanded presentation too complex. The main visitor path now begins with everyday work: paperwork, finding answers, connecting tools and understanding figures. Three introductory steps explain how to start. The verified project examples remain clearly labelled; no customer result or superiority claim was added. All engineering detail is now collected under one Services tab. This is a clarity and navigation decision, not evidence of a measured competitive advantage. Understanding and conversion still need testing with real prospective customers.
 
+## Service navigation reference
+
+The user supplied [ATS Global’s custom AI page](https://atsglobal.in/services/custom-ai). The page uses named capability tabs and separate deeper guides. This informed a grouped service hierarchy and individual definitions, not copied branding, outcomes, timelines or customer claims. Kapkoti’s Services page groups its own nine capabilities into Plan & prepare, Build & connect and Deploy & improve, with illustrative examples and explicit availability boundaries.
+
 ## Implementation result
 
 The site now has eight primary pages, three project details, privacy and a 404 page. Business pages explain four everyday needs and three introductory steps. The Services page retains all nine service categories, eight delivery stages and eight architecture layers. Shared templates, escaped content and a route registry replace manual duplication. Contact starts directly with a brief while retaining the assistant. Current technical verification belongs in `QA_REPORT.md`.

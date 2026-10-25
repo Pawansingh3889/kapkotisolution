@@ -154,13 +154,7 @@ summary::-webkit-details-marker { display:none; }
 .page-hero>.caption { margin-top:23px; max-width:800px; }
 .scope-note { display:grid; grid-template-columns:220px 1fr; align-items:start; gap:35px; padding:25px 28px; border:1px solid var(--line); background:var(--surface); border-radius:6px; }
 .scope-note p:not(.eyebrow) { font-size:14px; }
-.service-detail { border-top:1px solid var(--line); scroll-margin-top:110px; }
-.service-detail:last-child { border-bottom:1px solid var(--line); }
-.service-detail summary { display:flex; align-items:center; gap:32px; padding-block:29px; }
-.service-detail summary h2 { font-size:27px; }
-.service-detail summary p { font-size:14px; margin-top:7px; }
 .detail-indicator { margin-left:auto; display:grid; place-items:center; height:40px; width:40px; border:1px solid var(--line); border-radius:50%; font-size:22px; flex-shrink:0; }
-.service-detail[open] .detail-indicator { transform:rotate(45deg); background:var(--blue-soft); color:var(--blue); }
 .service-body { display:grid; grid-template-columns:1.2fr 1fr; gap:65px; padding:7px 0 42px 48px; }
 .service-description { font-size:16px; }
 .capability-list { list-style:none; margin-top:24px; }
@@ -168,7 +162,7 @@ summary::-webkit-details-marker { display:none; }
 .capability-list li:before { content:"+"; position:absolute; left:0; color:var(--blue); }
 .service-body aside { border-left:1px solid var(--line); padding-left:30px; }
 .availability { display:inline-block; color:var(--blue); background:var(--blue-soft); font:10px/1.7 ui-monospace,monospace; padding:6px 9px; border-radius:4px; margin-bottom:22px; }
-.service-body h3 { font-size:17px; margin:0 0 8px; }
+.service-body h4 { font-size:17px; margin:0 0 8px; }
 .service-body aside p { font-size:14px; margin-bottom:22px; }
 .two-column { display:grid; grid-template-columns:1fr 1fr; gap:90px; align-items:start; }
 .two-column h2 { margin:17px 0 25px; }
@@ -413,7 +407,6 @@ input::placeholder,textarea::placeholder { color:var(--muted); opacity:1; }
   .deployment-grid h3 { font-size:21px; }
   .governance-grid { grid-template-columns:repeat(2,1fr); }
   .service-body { gap:35px; }
-  .service-detail summary h2 { font-size:25px; }
   .industry-section { gap:45px; }
   .architecture-flow li { padding:22px; }
   .architecture-flow h3 { font-size:16px; }
@@ -485,9 +478,6 @@ input::placeholder,textarea::placeholder { color:var(--muted); opacity:1; }
   .page-hero>.actions { margin-top:23px; gap:15px; }
   .scope-note { display:block; padding:24px; }
   .scope-note p { margin-top:14px; }
-  .service-detail summary { gap:16px; padding-block:25px; }
-  .service-detail summary h2 { font-size:22px; }
-  .service-detail summary p { font-size:12px; }
   .detail-indicator { width:33px; height:33px; font-size:19px; }
   .service-body { grid-template-columns:1fr; gap:25px; padding:0 0 30px; }
   .service-description { font-size:15px; }
@@ -735,9 +725,6 @@ input::placeholder,textarea::placeholder { color:var(--muted); opacity:1; }
   .optional-details { padding:20px; }
   .optional-details>summary h2 { font-size:22px; }
   .optional-details>summary p:not(.eyebrow) { font-size:12px; }
-  .optional-content .service-detail summary { gap:10px; }
-  .optional-content .service-detail summary h2 { font-size:19px; }
-  .optional-content .service-detail .detail-indicator { width:26px; height:26px; }
   .optional-content .process-panel { padding:20px; }
   .project-title h3 { font-size:26px; }
 }
@@ -749,3 +736,73 @@ input::placeholder,textarea::placeholder { color:var(--muted); opacity:1; }
 .technical-project>h2 { font-size:30px; margin-top:12px; }
 .technical-project>.caption { margin-top:20px; }
 .optional-details,.technical-project,.process-panel,section[id] { scroll-margin-top:110px; }
+
+.services-hero { padding-top:50px; padding-bottom:40px; }
+.services-hero h1 { font-size:clamp(40px,4.2vw,60px); }
+.services-hero .page-intro { font-size:17px; margin-top:20px; }
+.services-intro { margin-top:18px; max-width:660px; }
+.service-explorer.enhanced { display:grid; grid-template-columns:275px minmax(0,1fr); gap:44px; align-items:start; }
+.service-explorer.enhanced .service-sidebar { position:sticky; top:110px; max-height:calc(100svh - 140px); overflow-y:auto; padding-right:7px; }
+.service-tab-group+.service-tab-group { margin-top:23px; }
+.service-group-name { display:flex; align-items:center; gap:10px; color:var(--text); font-size:13px; font-weight:650; }
+.service-group-name>span { display:grid; place-items:center; flex-shrink:0; width:25px; height:25px; border:1px solid var(--line); border-radius:50%; color:var(--blue); font:10px ui-monospace,monospace; }
+.service-branches { margin:8px 0 0 12px; padding-left:14px; border-left:1px solid var(--line); display:grid; gap:3px; }
+.service-tabs button { display:flex; justify-content:space-between; align-items:center; gap:14px; width:100%; min-height:44px; padding:11px 13px; border:0; border-radius:5px; background:transparent; color:var(--muted); font-size:13px; line-height:1.45; text-align:left; }
+.service-tabs button>span { flex-shrink:0; }
+.service-tabs button:hover { color:var(--blue); background:var(--blue-soft); }
+.service-tabs button[aria-selected=true] { background:var(--button); color:var(--button-text); }
+.service-panel { padding:38px; border:1px solid var(--line); border-radius:8px; background:var(--surface); scroll-margin-top:110px; }
+.service-panel+.service-panel { margin-top:24px; }
+.service-explorer.enhanced .service-panel { margin-top:0; min-height:550px; }
+.service-panel>h3 { font-size:38px; line-height:1.15; margin-top:18px; max-width:660px; }
+.service-definition { font-size:18px; line-height:1.8; margin-top:24px; max-width:680px; }
+.service-example { margin-top:27px; padding:23px; border-left:3px solid var(--blue); background:var(--tint); }
+.service-example>p:last-child { font-size:16px; margin-top:11px; }
+.service-scope { margin-top:27px; border-block:1px solid var(--line); padding-block:17px; }
+.service-scope>summary { display:flex; align-items:center; justify-content:space-between; gap:20px; min-height:44px; font-size:14px; color:var(--blue); }
+.service-scope>summary>span { font-size:23px; }
+.service-scope[open]>summary>span { transform:rotate(45deg); }
+.service-scope .service-body { padding:24px 0 0; gap:28px; grid-template-columns:1.2fr 1fr; }
+.service-scope h4 { font-weight:600; line-height:1.5; }
+.service-scope .service-description { font-size:14px; }
+.service-scope .capability-list { margin-top:15px; }
+.service-availability { font-size:12px; line-height:1.8; margin:23px 0; max-width:630px; }
+.service-availability strong { color:var(--text); font-weight:600; }
+.engineering-reference { padding-block:35px; margin-bottom:70px; border-block:1px solid var(--line); background:var(--tint); scroll-margin-top:110px; }
+.reference-summary { display:flex; align-items:center; justify-content:space-between; gap:30px; }
+.reference-summary h2 { font-size:30px; margin-top:12px; }
+.reference-summary p:last-child { margin-top:14px; font-size:15px; }
+.engineering-reference[open]>.reference-summary { margin-bottom:55px; }
+.engineering-reference[open]>.reference-summary .detail-indicator { transform:rotate(45deg); }
+@media(max-width:1099px) {
+  .service-explorer.enhanced { grid-template-columns:230px minmax(0,1fr); gap:26px; }
+  .service-panel { padding:28px; }
+  .service-panel>h3 { font-size:32px; }
+  .service-scope .service-body { grid-template-columns:1fr; }
+  .service-body aside { border-left:0; border-top:1px solid var(--line); padding:23px 0 0; }
+}
+@media(max-width:767px) {
+  .services-hero { padding-bottom:45px; }
+  .service-explorer.enhanced { grid-template-columns:1fr; gap:28px; }
+  .service-explorer.enhanced .service-sidebar { position:static; max-height:none; overflow:visible; padding-right:0; }
+  .service-branches { grid-template-columns:1fr 1fr; gap:5px; }
+  .service-tabs button { min-height:52px; border:1px solid var(--line); padding:10px; font-size:12px; background:var(--surface); }
+  .service-tab-group+.service-tab-group { margin-top:18px; }
+  .service-panel { padding:25px; }
+  .service-explorer.enhanced .service-panel { min-height:0; }
+  .service-panel>h3 { font-size:31px; }
+  .service-definition { font-size:17px; margin-top:20px; }
+  .service-example { padding:19px; }
+  .service-example>p:last-child { font-size:15px; }
+  .reference-summary h2 { font-size:26px; }
+  .reference-summary p:last-child { font-size:14px; }
+}
+@media(max-width:389px) {
+  .service-panel { padding:22px; }
+  .service-panel>h3 { font-size:28px; }
+  .service-tabs button { font-size:11px; gap:6px; }
+}
+
+.service-panel,#technical-services { scroll-margin-top:0; }
+.service-panel-actions { display:flex; flex-wrap:wrap; align-items:center; gap:20px; }
+.service-panel-actions>.text-link { font-size:13px; }

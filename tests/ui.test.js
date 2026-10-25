@@ -11,6 +11,7 @@ class Node {
   addEventListener(event, callback) { (this.listeners[event] ||= []).push(callback); }
   emit(event, properties = {}) { const value = { target: this, preventDefault() {}, ...properties }; for (const callback of this.listeners[event] || []) callback(value); }
   setAttribute(name, value) { this.attributes[name] = value; }
+  getAttribute(name) { return this.attributes[name] ?? null; }
   removeAttribute(name) { delete this.attributes[name]; }
   focus() { this.focused = true; }
   scrollIntoView() { this.scrolled = true; }
@@ -23,15 +24,16 @@ class Button extends Node {}
 class Details extends Node {}
 class Image extends Node {}
 
-function page(hash = '') {
+function page(hash = '', tabs = false) {
   const nodes = new Map([['menu', new Details('menu')], ['year', new Node('year')], ['theme-toggle', new Button('theme-toggle')]]);
-  const technicalDetails = new Details('technical-services');
-  const privateService = new Details('private-ai');
+  const technicalDetails = new Details('technical-reference');
+  const privateService = new Node('layer-models');
   privateService.parentElement = technicalDetails;
-  nodes.set('technical-services', technicalDetails);
-  nodes.set('private-ai', privateService);
-  const buttons = ['discover', 'design'].map((key) => { const node = new Button(); node.dataset.select = key; return node; });
+  nodes.set('technical-reference', technicalDetails);
+  nodes.set('layer-models', privateService);
+  const buttons = ['discover', 'design'].map((key) => { const node = new Button(); node.dataset.select = key; if (tabs) node.setAttribute('role', 'tab'); return node; });
   const panels = ['discover', 'design'].map((key) => { const node = new Node(key); node.dataset.panel = key; return node; });
+  panels.forEach((panel) => nodes.set(panel.id, panel));
   const controls = new Node();
   const explorer = new Node();
   explorer.querySelectorAll = (selector) => selector === '[data-select]' ? buttons : selector === '[data-panel]' ? panels : selector === '.explorer-controls' ? [controls] : [];
@@ -79,10 +81,32 @@ test('theme choice persists and initialization tolerates unavailable storage', (
   assert.equal(app.root.dataset.theme, 'dark');
 });
 
-test('a service link opens its optional section and the service inside it', () => {
-  const app = page('#private-ai');
-  assert.equal(app.nodes.get('technical-services').open, true);
-  assert.equal(app.nodes.get('private-ai').open, true);
-  assert.equal(app.nodes.get('private-ai').scrolled, true);
+test('service tabs expose one selected tab and keyboard stop, including deep links', () => {
+  const app = page('#design', true);
+  assert.equal(app.buttons[0].attributes['aria-selected'], 'false');
+  assert.equal(app.buttons[0].attributes.tabindex, '-1');
+  assert.equal(app.buttons[1].attributes['aria-selected'], 'true');
+  assert.equal(app.buttons[1].attributes.tabindex, '0');
+  assert.equal(app.panels[1].hidden, false);
+  assert.equal(app.panels[1].scrolled, true);
+  app.buttons[1].emit('keydown', { key: 'ArrowDown' });
+  assert.equal(app.buttons[0].attributes['aria-selected'], 'true');
+  assert.equal(app.buttons[0].attributes.tabindex, '0');
+  assert.equal(app.buttons[1].attributes.tabindex, '-1');
+  assert.equal(app.buttons[0].focused, true);
+  assert.equal(app.panels[0].hidden, false);
+  assert.equal(app.panels[1].hidden, true);
+  app.buttons[1].emit('click');
+  assert.equal(app.panels[1].scrolled, true);
+  app.context.window.location.hash = '#architecture';
+  app.context.window.emit('hashchange');
+  assert.equal(app.buttons[1].attributes['aria-selected'], 'true');
+  assert.equal(app.panels[1].hidden, false);
+});
+
+test('an engineering link opens its containing optional section', () => {
+  const app = page('#layer-models');
+  assert.equal(app.nodes.get('technical-reference').open, true);
+  assert.equal(app.nodes.get('layer-models').scrolled, true);
   assert.equal(app.nodes.get('menu').open, false);
 });

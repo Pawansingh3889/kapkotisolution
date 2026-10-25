@@ -9,11 +9,15 @@ Updated 25 October 2026. The user approved the repository audit, positioning, mu
 | 3. Architecture/design | Eight primary pages, project detail pages, privacy, shared layout, design tokens and claim boundaries approved. |
 | 4. Implementation | Static page generation, complete service content, project boundaries, industry examples, delivery/stack explorers, themes, direct intake and retained About illustration implemented. |
 | 5. Local review | Unit/build/link checks, browser breakpoint matrix, interactions and Lighthouse audits executed. Exact results and limits are in QA_REPORT.md. |
-| 6. Readiness | Built artifact and release/rollback instructions prepared. Production publication and live intake verification have not occurred. |
+| 6. Readiness | Built artifact and release/rollback instructions prepared. Initial redesign deployment was authorized and completed; live enquiry/email delivery remains unverified. |
 
 ## Plain-language revision
 
 The user asked to simplify the site for nontechnical visitors, then to put technical details under one tab. The main pages now use four familiar business needs, practical examples, three introductory steps and a direct message form. A single Services page holds all nine engineering services, architecture and methods, deployment and governance, three project architecture/evidence sections, the eight-stage process and the optional 3D illustration. No technical catalogue or explorer remains on the business pages. Tests enforce that boundary.
+
+## Service hierarchy revision
+
+The user requested named service tabs and a hierarchy after reviewing ATS Global’s custom AI page. Services now groups all nine existing capabilities into Plan & prepare, Build & connect and Deploy & improve. Each service defines its purpose, gives an illustrative business example, states current scope and retains full capabilities, deliverables and measurements in a disclosure. The architecture/reference material stays optional on this same page. Existing routes and fragments remain. The shared explorer supports proper tab semantics and preserves unrelated selections.
 
 ## Scope and preservation
 

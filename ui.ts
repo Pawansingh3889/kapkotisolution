@@ -46,18 +46,27 @@ document.querySelectorAll<HTMLElement>('[data-explorer]').forEach((explorer) => 
   function activate(index: number) {
     const button = buttons[index];
     if (!button || !panels.some((panel) => panel.dataset.panel === button.dataset.select)) throw new RangeError('Unknown explorer selection.');
-    buttons.forEach((choice) => { choice.setAttribute('aria-pressed', String(choice === button)); });
+    buttons.forEach((choice) => {
+      const selected = choice === button;
+      if (choice.getAttribute('role') === 'tab') {
+        choice.setAttribute('aria-selected', String(selected));
+        choice.setAttribute('tabindex', selected ? '0' : '-1');
+      } else choice.setAttribute('aria-pressed', String(selected));
+    });
     panels.forEach((panel) => { panel.hidden = panel.dataset.panel !== button.dataset.select; });
   }
+  activate(0);
   const fromHash = () => {
     const selected = panels.find((panel) => `#${panel.id}` === window.location.hash);
-    const index = selected ? buttons.findIndex((button) => button.dataset.select === selected.dataset.panel) : 0;
-    activate(index);
+    if (selected) activate(buttons.findIndex((button) => button.dataset.select === selected.dataset.panel));
   };
   fromHash();
   window.addEventListener('hashchange', fromHash);
   buttons.forEach((button, index) => {
-    button.addEventListener('click', () => { activate(index); });
+    button.addEventListener('click', () => {
+      activate(index);
+      if (button.getAttribute('role') === 'tab') panels.find((panel) => panel.dataset.panel === button.dataset.select)?.scrollIntoView({ block: 'start' });
+    });
     button.addEventListener('keydown', (event) => {
       let next: number;
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (index + 1) % buttons.length;
@@ -86,7 +95,7 @@ function revealLinkedContent() {
     }
     linked = linked.parentElement;
   }
-  if (revealed) target?.scrollIntoView({ block: 'start' });
+  if (revealed || target?.dataset.panel) target?.scrollIntoView({ block: 'start' });
 }
 revealLinkedContent();
 window.addEventListener('hashchange', revealLinkedContent);

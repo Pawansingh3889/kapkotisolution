@@ -7,7 +7,7 @@ Updated 25 October 2026. This records completed checks and explicit limits; it i
 - [x] Semantic header, navigation, main, sections and footer with a skip link.
 - [x] One H1 and unique document metadata on every route.
 - [x] Native mobile navigation, keyboard focus styling, Escape closure and focus return.
-- [x] Native service disclosures and complete HTML content on Services; deep links reveal and scroll to collapsed content.
+- [x] Grouped service tabs with selected state, linked tab panels and one keyboard stop; optional scope disclosures and complete static HTML. Deep links select service panels and reveal collapsed reference content.
 - [x] Delivery/stack controls have pressed state, controlled IDs, keyboard arrow/Home/End behavior and exactly one selected panel when enhanced.
 - [x] All eight delivery and all eight architecture selections exercised in Chrome.
 - [x] Meaningful product/illustration alternatives; decorative diagram parts excluded where appropriate.

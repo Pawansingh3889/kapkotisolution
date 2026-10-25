@@ -5,8 +5,18 @@ export const businessServices = [
   { id: 'decisions', title: 'A clearer view of the business.', question: 'Do your figures take too long to explain?', description: 'Bring business figures into useful reports and explore patterns that could help you plan.', examples: ['Understand stock, sales or production figures', 'Spot unusual changes worth checking', 'Assess whether forecasting would help'], outcome: 'Information your team can use to make decisions. We test what the available records can support.' },
 ];
 
+export const serviceGroups = [
+  { id: 'plan', title: 'Plan & prepare' },
+  { id: 'build', title: 'Build & connect' },
+  { id: 'run', title: 'Deploy & improve' },
+];
+
 export const services = [
   {
+    group: 'plan',
+    label: 'AI planning & advice',
+    summary: 'Work out where AI could help, whether it is the right approach and what a sensible first test would look like.',
+    example: 'A team spends hours preparing a weekly report. We review the steps and agree which part is worth testing first.',
     id: 'discovery', title: 'Discovery & architecture', short: 'Find the problem worth solving.',
     description: 'Turn an operational problem into a realistic engineering brief. We map how the work happens, what a useful result looks like, and whether AI is the right tool.',
     capabilities: ['Business process discovery and workflow analysis', 'Data readiness assessment and AI feasibility studies', 'Build-versus-buy and cloud-versus-on-premise assessment', 'Proof-of-concept development', 'Architecture, deployment planning and ROI evaluation'],
@@ -15,6 +25,10 @@ export const services = [
     status: 'Engineering approach',
   },
   {
+    group: 'plan',
+    label: 'Data preparation',
+    summary: 'Bring scattered or inconsistent business information into a dependable form before building an AI tool.',
+    example: 'Customer names and product codes differ across spreadsheets. We plan a repeatable way to clean and combine the records.',
     id: 'data', title: 'Data engineering & preparation', short: 'Give your AI dependable foundations.',
     description: 'Reliable AI begins with reliable data. Missing records, inconsistent labels and stale sources become unreliable answers. We make data fit for its intended task before choosing a model.',
     capabilities: ['Data collection, ingestion and ETL/ELT pipelines', 'Cleaning, normalization and dataset validation', 'Annotation and labelling', 'Structured and unstructured processing, including document parsing', 'Data quality monitoring', 'Synthetic data generation where appropriate', 'Training, validation and test dataset preparation'],
@@ -23,6 +37,10 @@ export const services = [
     status: 'Project-backed data workflows',
   },
   {
+    group: 'build',
+    label: 'Model selection & adaptation',
+    summary: 'Compare existing AI models on your actual task, then assess whether any extra customization is worth the cost.',
+    example: 'A document tool needs to recognize your industry’s terms. We compare suitable models before deciding whether extra training is needed.',
     id: 'models', title: 'Model selection & customization', short: 'The right model for the actual job.',
     description: 'Compare commercial APIs, open-weight models and conventional ML against your own examples. Customization is justified by measured need, data rights and the cost of operating it.',
     capabilities: ['Open-weight and commercial API model evaluation', 'Task-specific benchmarking and domain adaptation', 'Supervised fine-tuning and parameter-efficient fine-tuning', 'LoRA and QLoRA', 'Task-specific and predictive ML models', 'Quantization and model distillation where appropriate'],
@@ -31,6 +49,10 @@ export const services = [
     status: 'Selection demonstrated; training assessed per project',
   },
   {
+    group: 'run',
+    label: 'Private AI',
+    summary: 'Assess whether an AI tool can run on your own systems or private infrastructure, with clear rules for how information is handled.',
+    example: 'A factory wants help finding internal instructions. We assess local hosting, hardware and access controls before choosing a setup.',
     id: 'private-ai', title: 'Private AI & on-premise inference', short: 'Choose where intelligence runs.',
     description: 'Assess local, private-cloud and hybrid architectures around your data, hardware and operational constraints. Local hosting changes who operates the model; privacy still depends on the complete deployment.',
     capabilities: ['Locally hosted language models and private inference servers', 'On-premise assistants and hybrid inference', 'GPU/CPU assessment and quantized model deployment', 'Private document retrieval', 'Model serving and API integration', 'Infrastructure monitoring, data isolation and access controls'],
@@ -39,6 +61,10 @@ export const services = [
     status: 'Local architecture demonstrated',
   },
   {
+    group: 'build',
+    label: 'Document & knowledge search',
+    summary: 'Help people find answers in approved company documents, with sources they can check and access rules that match their role.',
+    example: 'A new employee asks how a return should be handled. The tool finds the relevant company policy and points to the source.',
     id: 'rag', title: 'RAG & knowledge systems', short: 'Answers grounded in approved knowledge.',
     description: 'Connect a model to the information your people are allowed to use. Retrieval supplies relevant source material at question time; it does not retrain the foundation model.',
     capabilities: ['Document ingestion and embedding pipelines', 'Vector search, hybrid retrieval and reranking', 'Knowledge-base synchronization and document versioning', 'Source citations and access-controlled retrieval', 'Retrieval-quality evaluation and hallucination reduction'],
@@ -47,6 +73,10 @@ export const services = [
     status: 'Document search demonstrated; enterprise controls scoped',
   },
   {
+    group: 'build',
+    label: 'AI agents & integrations',
+    summary: 'Connect AI to your existing software so it can help with a defined task. Sensitive changes need checks and the right approval.',
+    example: 'Ask about available stock inside your business software, then prepare an order draft for someone to review and save.',
     id: 'integration', title: 'Agents & business integration', short: 'Connect intelligence to the work.',
     description: 'Embed assistance into your ERP, CRM or application through explicit interfaces. Models can propose a next step; code validates it and the appropriate person or policy authorizes sensitive actions.',
     capabilities: ['ERP, CRM and API integration', 'API-based tool calling and structured tool contracts', 'Multi-step orchestration and governed agents', 'Human approvals and read-only business assistants', 'Transaction-safe automation and role-based authorization', 'Audit logging, idempotency and retry handling'],
@@ -55,6 +85,10 @@ export const services = [
     status: 'Read/propose integration demonstrated',
   },
   {
+    group: 'build',
+    label: 'Forecasting & analytics',
+    summary: 'Use past business records to explore trends, spot unusual changes and assess whether forecasting could support better planning.',
+    example: 'A shop wants to plan stock for next month. We first check whether its sales records can support a useful forecast.',
     id: 'predictive', title: 'Predictive analytics & ML', short: 'Better decisions from patterns in data.',
     description: 'Not every business problem needs a language model. Statistical models and conventional machine learning estimate quantities, classify outcomes and detect unusual behavior, rather than generate a conversation.',
     capabilities: ['Demand and sales forecasting', 'Inventory optimization and customer segmentation', 'Anomaly detection and quality prediction', 'Production yield analysis and predictive maintenance', 'Financial forecasting and operational risk analysis'],
@@ -63,6 +97,10 @@ export const services = [
     status: 'Analytics demonstrated; predictive models assessed',
   },
   {
+    group: 'run',
+    label: 'Testing & governance',
+    summary: 'Check whether the tool gives useful answers, respects permissions and handles difficult situations before changes are released.',
+    example: 'An assistant must answer staff questions without revealing restricted records. We test both the answers and the access boundaries.',
     id: 'evaluation', title: 'Evaluation, safety & governance', short: 'Make reliability part of the build.',
     description: 'Define what the system must get right and how it must fail. Evaluation results guide reviewed changes; they do not automatically update production models.',
     capabilities: ['Model and retrieval evaluation', 'LLM-as-judge evaluation calibrated against human review', 'Golden datasets and regression testing', 'Prompt injection and tool authorization testing', 'Multi-tenant isolation tests and audit trails', 'Model/prompt versioning and cost/latency monitoring', 'Incident investigation and feedback-driven improvement'],
@@ -71,6 +109,10 @@ export const services = [
     status: 'Evaluation and governance demonstrated',
   },
   {
+    group: 'run',
+    label: 'Deployment & support',
+    summary: 'Put an agreed solution into use, monitor how it runs and define who handles updates, failures and ongoing costs.',
+    example: 'An internal assistant is ready for a limited release. We agree hosting, monitoring, support responsibilities and a way to recover if something fails.',
     id: 'operations', title: 'Deployment & managed operations', short: 'Built to run. Maintained with care.',
     description: 'Plan the release and the work after it: monitoring, recovery, upgrades and cost. The operating model and support responsibilities are agreed for each engagement.',
     capabilities: ['Inference APIs and containerized deployment', 'Cloud/on-premise deployment and model serving', 'Autoscaling and request batching', 'Streaming, caching and rate limiting', 'Observability and usage analytics', 'Model lifecycle management', 'Performance and cost optimization'],

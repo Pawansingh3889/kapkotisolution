@@ -15,8 +15,8 @@ Updated 25 October 2026. Actual local lab results are in `QA_REPORT.md`. Targets
 
 | Item | Budget/goal | Current evidence |
 | --- | --- | --- |
-| Initial home JavaScript | Under 20 KiB uncompressed | Approximately 4.3 KiB across UI, theme and shared helper |
-| CSS | Under 60 KiB uncompressed | 48,717 bytes in the current artifact |
+| Initial home JavaScript | Under 20 KiB uncompressed | Approximately 4.5 KiB across UI, theme and shared helper |
+| CSS | Under 60 KiB uncompressed | 52,873 bytes in the current artifact |
 | Three.js on entry | Zero on main marketing pages | Only explicit Services interaction imports the system chunk |
 | Video on entry | No video body download | Native `preload=none` |
 | LCP | At most 2.5 s | See the latest mobile lab run in QA_REPORT.md |
@@ -27,6 +27,8 @@ Updated 25 October 2026. Actual local lab results are in `QA_REPORT.md`. Targets
 The earlier 24 October cold/warm paired cache audit uses Lighthouse's documented `--disable-storage-reset` behavior with a separate persistent temporary profile: https://github.com/GoogleChrome/lighthouse. The warm network log confirmed script disk-cache hits. Both runs used default mobile simulated throttling. Local serving, lab simulation and this hardware do not predict every customer network/device.
 
 The theme script and CSS block first render intentionally to prevent a theme flash. Current Lighthouse performance scores are 100; no extra preload system, animation framework or rendering dependency was added to chase the remaining small dependency-chain insight. Reconsider only after a measured user-facing problem.
+
+The grouped Services revision measured 99 performance and 100 for the other Lighthouse categories locally. Its mobile lab CLS was 0.0533, below the 0.1 target. Tabs progressively enhance complete static HTML; no extra framework or dependency was added.
 
 ## Motion and remaining measurements
 

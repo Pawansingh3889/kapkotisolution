@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { access, readFile } from 'node:fs/promises';
 import { pages, renderPages, renderSitemap } from '../scripts/render-site.mjs';
+import { services, serviceGroups } from '../content.mjs';
 
 const bundles = Object.fromEntries(['app', 'ui', 'theme', 'studio'].map((name) => [name, `/assets/${name}-test.js`]));
 const rendered = await renderPages(bundles);
@@ -52,16 +53,29 @@ test('sitemap contains exactly the indexable routes and the 404 page is excluded
 test('technical content is complete and confined to the Services page', () => {
   const technical = byRoute.get('/technology/');
   const controls = [...technical.matchAll(/data-select="([^"]+)" aria-controls="([^"]+)"/g)];
-  assert.equal(controls.length, 16);
+  assert.equal(controls.length, 25);
   for (const [, key, id] of controls) {
     assert.ok(technical.includes(`id="${id}" data-panel="${key}"`), id);
     assert.ok(!technical.includes(`id="${id}" data-panel="${key}" hidden`), `Hidden without JavaScript: ${id}`);
   }
-  assert.equal([...technical.matchAll(/class="service-detail"/g)].length, 9);
+  assert.equal([...technical.matchAll(/class="service-panel"/g)].length, 9);
   assert.equal([...technical.matchAll(/class="technical-project"/g)].length, 3);
   for (const [path, html] of byRoute) {
     if (path === '/technology/') continue;
-    assert.doesNotMatch(html, /data-explorer|class="service-detail"|class="technical-project"|id="scene"/, path);
+    assert.doesNotMatch(html, /data-explorer|class="service-panel"|class="technical-project"|id="scene"/, path);
+  }
+});
+
+test('the service hierarchy includes every service once with a named, linked tab panel', () => {
+  assert.equal(serviceGroups.length, 3);
+  assert.equal(new Set(serviceGroups.map((group) => group.id)).size, 3);
+  assert.equal(new Set(services.map((service) => service.id)).size, 9);
+  const html = byRoute.get('/technology/');
+  for (const service of services) {
+    assert.ok(serviceGroups.some((group) => group.id === service.group), service.id);
+    assert.ok(service.label && service.summary && service.example, service.id);
+    assert.ok(html.includes(`id="service-tab-${service.id}" type="button" role="tab" data-select="${service.id}" aria-controls="${service.id}"`), service.id);
+    assert.ok(html.includes(`role="tabpanel" aria-labelledby="service-tab-${service.id}"`), service.id);
   }
 });
 
