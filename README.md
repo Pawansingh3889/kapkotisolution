@@ -1,12 +1,8 @@
 # Kapkoti Solution
 
-A technology studio website for ERP, custom software, governed AI, data, integrations, and cloud architecture. The approved redesign direction, The Operating System, pairs a yellow character with a dark connected-system interface. Static HTML/CSS and strict TypeScript browser sources build into `dist/site/`; a Cloudflare Worker provides English/Hindi AI conversations and private problem intake using the existing D1 database.
+A static, multi-page website for an independent AI engineering and integration practice. The public message is “Less busywork. More time for business.” Four everyday needs and a three-step introduction keep the main pages readable for nontechnical visitors. Architecture, the full service catalogue, project build evidence and the detailed delivery process live under the single Services navigation tab.
 
-The redesign is implemented locally and has not been deployed. The custom domain still serves the baseline GitHub Pages site. See `QA_REPORT.md` for tested behavior and outstanding browser/device checks.
-
-## Work locally
-
-Node 22.13+ (built-in SQLite is used in the tests) and pnpm are required. Cloudflare account access is needed for remote database operations and deployment, not for the mocked unit suite.
+## Develop and verify
 
 ```sh
 pnpm install --frozen-lockfile
@@ -17,73 +13,70 @@ pnpm build
 pnpm dev
 ```
 
-AI calls use OpenRouter from the Cloudflare Worker. Add the API key with `pnpm exec wrangler secret put OPENROUTER_API_KEY`. The website intentionally points to the deployed API; use unit tests for isolated local intake tests. Never submit real visitor information during testing.
+`pnpm dev` builds `dist/site/` and starts a local Cloudflare Worker. It uses a local-only compatibility-date override of `2026-09-22`: the pinned installed workerd cannot start with the production date `2026-09-27`. Production configuration remains unchanged. The override validates the site locally, not production runtime compatibility. Resolve this toolchain mismatch before relying on local runtime behavior for a future Worker feature.
 
-For a static preview, run `pnpm build:site`, then serve `dist/site/` with a local HTTP server. `pnpm dev` builds the same artifact before starting Wrangler. Rebuild after changing source files; this setup does not include a separate TypeScript watch process. Do not serve the repository root as the production artifact.
+The browser intentionally uses the existing deployed intake API. Localhost is not an allowed submission origin. Do not send real or synthetic enquiries to production during QA: unit tests mock model/email providers and use an in-memory database. A static preview can also serve `dist/site/`; never serve the repository root as the production artifact. Restart `pnpm dev` after editing sources; there is no separate source watch process. Stop the preview before a separate production dry-run build: packaging recreates the asset directory, and the installed local runtime can retain a stale asset manifest until restarted.
 
-## Frontend sources and build output
+The navigation labels are How We Help (`/services/`) and Services (`/technology/`). Existing routes and fragments are preserved when renaming these labels.
+
+## Source and build boundaries
 
 | Source | Responsibility |
 | --- | --- |
-| `index.html`, `style.css` | Crawlable content, design tokens, responsive layout, navigation, inquiry markup |
-| `app.ts` | AI chat, manual/reviewed brief, consent, submission recovery, confirmation, download |
-| `ui.ts` | Service and Rigel screenshot controls, optional scene loading, film visibility handling |
-| `scene/system.ts`, `scene/character.ts`, `scene/workflow.ts` | Procedural character and connected systems, rendering policy, disposal and fallback |
-| `media/character-short.mp4` | Separate 23-second character edit used by the redesigned page |
-| `scripts/build-client.mjs` | Compiles browser entries and splits the optional scene bundle into ignored `assets/` |
-| `scripts/sync-site.sh` | Recreates ignored `dist/site/` from the selected public files and media |
+| `index.html` | Home-page body fragment |
+| `pages/*.html` | Inner-page body fragments, contact and privacy |
+| `templates/layout.html` | Shared document head, navigation and footer |
+| `templates/solution.html` | Shared project-detail layout |
+| `content.mjs` | Business needs, engineering services, stages, architecture layers, projects and industries |
+| `scripts/render-site.mjs` | Route registry, escaped content components, metadata, structured data and sitemap |
+| `style.css` | Responsive layout, light/dark tokens, components and reduced-motion rules |
+| `theme.ts` | Small blocking preference initializer that avoids a theme flash |
+| `ui.ts` | Shared navigation/theme, optional explorers, product controls and film visibility |
+| `app.ts` | Contact-page intake only; direct brief first, assistant optional |
+| `studio.ts`, `scene/*.ts` | Optional Services illustration, dynamically loaded Three.js and lifecycle |
+| `worker.js`, `migrations/` | Existing intake API, D1 persistence and delivery retries |
+| `scripts/build-client.mjs` | Hashed browser bundles and generated HTML under ignored `assets/` |
+| `scripts/sync-site.sh` | Allowlisted public artifact under ignored `dist/site/` |
+| `scripts/render-social.mjs` | Reproduce the 1200 by 630 social image using the installed canvas dependency |
 
-The hero starts with a static image and readable HTML. Desktop pointer interaction or the explicit 3D control loads the scene. Mobile, reduced-motion, and data-saving users are not automatically given the full scene. Ordinary service controls and contact remain available independently of WebGL. See `THREE_D_ARCHITECTURE.md` for scene lifecycle details.
+The artifact contains eight main pages, three project-detail pages, privacy and a custom 404. Cloudflare normalizes HTML routes and serves unknown paths with a 404 status. It does not use a catch-all SPA fallback. The sitemap is generated from the same route registry; its tracked root copy is checked by tests.
 
-`pnpm build:client` compiles TypeScript into `assets/`. `pnpm build:site` also packages `dist/site/`. `pnpm build` first runs type checks, then builds that artifact and performs a Wrangler dry run. Lint and tests remain separate required checks. `wrangler.jsonc` serves `dist/site/` for preview and the next explicitly approved Worker deployment.
+No new application dependency, backend, database or migration was introduced. Existing scene geometry and original film assets remain recoverable. Root `app.js`, `story.js`, `scene/story.js`, `public/`, `design-review/`, and earlier creative/storyboard documents are historical baseline material, not current build inputs. Do not edit generated `assets/` or `dist/`.
 
-Do not edit or commit generated `assets/` or `dist/`. Root `app.js`, `story.js`, `scene/story.js`, and `public/` are retained baseline artifacts and are not inputs to the redesigned page. The old `build:story` and `video` commands concern the baseline shop scene and landscape film, not the new character scene or short edit. Original `media/reel.mp4`, `media/workflow.mp4`, and their posters remain recoverable in the repository; the release packaging includes only the selected short film and current artwork.
+## Content and evidence
 
-## Deployment and release approval
+Project descriptions distinguish implementation evidence, demonstrators, pilots and roadmap work. See `WEBSITE_AUDIT.md` for inspected sources and competitor research. Do not turn an implemented code path into a claim that the same revision is deployed or production-ready. No customer counts, certifications, testimonials, training results or guaranteed outcomes are advertised.
 
-No deployment is authorized by local build or QA. Before publishing, approve the reviewed `dist/site/` artifact and the hosting path, then complete the remaining checks in `QA_REPORT.md`.
+Rigel is an independent ERP example with read/propose boundaries. FloorMind has different local/hosted implementation paths; privacy is configuration-specific. Elenchus is a survey/workflow pilot. Its former public pilot endpoint returned HTTP 500 during review, so the project page offers a guided-walkthrough enquiry instead of sending visitors to that endpoint.
 
-The current custom domain uses GitHub Pages branch-root publishing. The redesigned HTML needs compiled bundles that are deliberately ignored in Git. It must therefore be published from the built artifact; merging source into the existing branch-root publishing setup without changing that release path would leave required bundles unavailable. `.github/workflows/pages-preview.yml` is manual-only and uploads a review artifact. It does not deploy Pages, change repository hosting settings, or publish the Worker.
+## Intake operations
 
-The existing GitHub Pages response does not serve the security headers in `_headers`. Verify header enforcement as part of the approved deployment approach, and check the actual custom domain after release. A passing local build or Worker preview does not verify that domain.
+The existing API endpoints are `/api/chat`, `/api/brief` and `/api/submit`. The assistant uses OpenRouter; its current model is `openai/gpt-4o-mini`. Contact details entered in the form stay outside the model context. The visitor reviews the brief and explicitly consents before submission. Only a verified database save produces a success screen.
 
-For a separately approved Worker release:
+Preserve the deployed D1 database and both existing migrations. Never reset D1 for a marketing-site update. The Worker enforces allowed origins, JSON/body limits, conversation roles, contact validation, hashed-address limits and a global model budget. Existing limits are 10 exchanges, 30 AI requests and 5 submissions per network address per UTC day, with 300 AI requests globally per day. Shared-network visitors share the address limit.
 
-1. Apply migrations: `pnpm exec wrangler d1 migrations apply kapkoti-intake --remote`.
-2. Set `OPENROUTER_API_KEY` and `RATE_LIMIT_SALT` with `pnpm exec wrangler secret put OPENROUTER_API_KEY` and `pnpm exec wrangler secret put RATE_LIMIT_SALT`. Do not commit or expose either secret. Wrangler stores deployment credentials in its own authenticated configuration; permanent credential backups belong in the password store.
-3. Publish the Worker and preview assets with `pnpm run deploy`.
-4. Verify the Worker preview and its asset responses. Publishing the Worker does not itself update the currently branch-published GitHub Pages custom domain. `CNAME` is retained in the static artifact for the eventual approved domain configuration.
+Submissions use a UUID and payload fingerprint to make retries safe. The saved record is emailed through Resend from `notifications@kapkotisolution.com` to `pawan@kapkotisolution.com`. Provider acceptance is recorded separately from database success; it is not proof of inbox delivery. A once-per-minute scheduled task retries one pending email. Provider failures do not undo a saved submission. Resend suppresses duplicate idempotency keys for 24 hours; a database outage beyond that after an accepted send can produce a duplicate. Check Resend logs for bounces.
 
-The browser API endpoint is in `app.ts`. The AI provider is OpenRouter, model `openai/gpt-4o-mini`. API payloads are capped at 65 KB, with up to 10 exchanges, 30 AI requests per hashed network address per day, 5 submission requests per address per day, and 300 total AI requests per day. Multiple visitors on a shared network share the address limit. Raising limits may increase usage costs.
+Secrets remain in Cloudflare configuration: `OPENROUTER_API_KEY`, `RATE_LIMIT_SALT`, `RESEND_API_KEY`. Never put values into source, shell arguments, tests or public output. Set them through Wrangler's hidden secret prompt if configuration is actually required. Keep permanent backups in the password store. Do not replace GoDaddy incoming-mail MX records when configuring Resend sending verification.
 
-The redesign requires no database schema change. Retain the existing migrations and do not reset D1 data for a visual deployment or rollback. Recovery baseline: `ddc5c56`.
-
-## Email submitted briefs to Pawan
-
-Every saved submission is emailed to `pawan@kapkotisolution.com` through Resend. The plain-text email includes the submission reference and time, visitor name, contact method and details, consent version, approved brief, and full English/Hindi conversation. Contact details and conversation text are kept in the email body, never interpolated into mail headers.
-
-1. Create a [Resend account](https://resend.com/signup) and add `kapkotisolution.com` under Domains.
-2. Add Resend's sending-verification DNS records in GoDaddy and wait for the domain to show Verified. Keep the existing root-domain MX records that deliver incoming mail to GoDaddy. The sender is `notifications@kapkotisolution.com`.
-3. Create a Resend API key with sending access for this domain, then run `pnpm exec wrangler secret put RESEND_API_KEY`. Keep `RESEND_API_KEY` literally in the command and paste the key only at the hidden prompt. The success message must name `RESEND_API_KEY`.
-4. Apply migrations and deploy using the commands above. Migration `0002_submission_email.sql` adds delivery tracking; apply it before deploying the updated Worker.
-
-The Worker saves the submission before attempting email in the background. A once-per-minute scheduled task retries one pending email, including submissions saved before email was configured. Provider failures do not undo a saved brief. Missing configuration causes a failed email attempt and leaves the row pending. A successful Resend response sets `email_sent_at`; this records provider acceptance, not a confirmed inbox delivery. Resend's idempotency key suppresses duplicate attempts for 24 hours; a database outage lasting longer than that after an accepted send can produce a duplicate. Check Resend's delivery logs for bounces.
-
-## Read and follow up on problems
-
-Open the private [Cloudflare D1 database](https://dash.cloudflare.com/95b5209ffbd303836bea1dfc300ee927/workers/d1/databases/b6f42a4c-baf9-4a15-8faf-b95d5d6d92e3) and use the Console:
+Review new submissions in the private D1 console:
 
 ```sql
-SELECT id, created_at, name, contact_method, contact, brief, conversation, email_sent_at
+SELECT id, created_at, name, contact_method, contact, brief,
+       conversation, email_sent_at
 FROM submissions WHERE status = 'new' ORDER BY created_at DESC;
 ```
 
-Reply personally from pawan@kapkotisolution.com, then set that row's status to `contacted` or `closed`. Check the inbox regularly to support the stated aim of replying within a few days. Rows with a null `email_sent_at` are waiting for an accepted email send. No public endpoint exposes submissions.
+Follow up personally, then set the specific row's status to `contacted` or `closed`. For a verified deletion request, remove the identified record and its emailed copies from the inbox and Resend. Review closed requests when no longer needed; the public disclosure promises no fixed retention period. No public endpoint exposes submissions.
 
-For a verified deletion request, find the specific submission by its reference and remove that row and its emailed copies from the inbox and Resend. The privacy disclosure does not promise a fixed retention period; review and remove closed requests when no longer needed. Abuse-prevention records expire after their UTC day and are cleaned on subsequent API traffic.
+The assistant cannot execute business actions, query saved enquiries or send email. Transcripts supplied by a visitor's browser are untrusted input, not authenticated audit logs. Prompt instructions are not a security boundary. Keep validation, permissions, limits and saves in application code.
 
-## Boundaries
+## Release and recovery
 
-The assistant has no tools and cannot send email, act on a business system, query submissions or commit to a solution. It helps clarify a problem; the visitor reviews and edits the brief, enters contact information outside the model context, and explicitly consents before submission. Only a verified database write produces a success screen. Submission IDs make retries idempotent. Conversation content is rendered as text, never HTML.
+The custom domain was observed serving the current Cloudflare asset/header configuration during the audit. The previous README's branch-root GitHub Pages description was stale. `wrangler.jsonc` declares the domain routes and asset directory; `pnpm build` is a dry run and does not publish.
 
-The transcript is supplied by the visitor's browser and is untrusted intake data, not an authenticated audit log. Prompt instructions guide language and scope; they are not a security boundary. Permissions, size limits, validation, budgets and database writes are enforced by code. Provider failures leave direct brief submission available. Refreshing the page clears unsubmitted text, with a browser warning when possible.
+The GitHub workflow runs quality/build checks on pull requests or manual dispatch and uploads `dist/site/`. It never deploys. Inspect the exact artifact, hosting configuration and API configuration before an explicitly authorized release. This task prepared deployment readiness; it did not publish.
+
+For an authorized release, run the required checks, record the source revision and retain the prior complete built artifact. Publish the Worker and all generated assets together through the existing `pnpm run deploy` path. No new migration or secret change is required by this redesign. On the real domain, verify main/inner routes, 404 status, metadata, asset loading, security headers, consent and the intake path with an appropriate controlled verification plan.
+
+Rollback by restoring the previous complete Worker/asset version using the existing hosting controls. Keep D1 data and secrets intact. Do not merge source into any branch-root static publishing path that omits ignored compiled bundles. Unit tests do not prove live model behavior or email delivery. Current QA results and remaining limits are in `QA_REPORT.md`.

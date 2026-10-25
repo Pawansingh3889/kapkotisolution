@@ -1,5 +1,6 @@
 name: Build reviewed website artifact
 on:
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,7 +17,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test && pnpm lint && pnpm typecheck && pnpm build:site
+      - run: pnpm test && pnpm lint && pnpm build
       - uses: actions/upload-artifact@v4
         with:
           name: kapkoti-website

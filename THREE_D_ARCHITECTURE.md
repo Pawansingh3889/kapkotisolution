@@ -1,22 +1,23 @@
 # 3D architecture
 
-Updated: 2026-10-20. Selected direction: **2, The Operating System**. The implementation retains static HTML/CSS, strict browser TypeScript, Three.js and esbuild. The existing Cloudflare Worker, D1 storage and AI inquiry remain by explicit user instruction. This redesign adds no database or framework migration.
+Updated: 25 October 2026. The existing Three.js implementation is retained as an optional Services page illustration. Static HTML/CSS, strict browser TypeScript and esbuild remain. This work adds no database or framework migration.
 
 ## Source boundaries
 
 | File | Responsibility |
 | --- | --- |
-| `index.html` | Semantic content, fallback image, native controls and inquiry markup |
-| `style.css` | Tokens, layout, static composition and reduced motion |
-| `app.ts` | Navigation and preserved inquiry behavior |
-| `ui.ts` | Service selection, optional scene loading, screenshot selection and film pausing |
-| `scene/system.ts` | Renderer, camera, lights, quality policy and lifecycle |
-| `scene/character.ts` | Procedural character factory |
-| `scene/workflow.ts` | Six connected modules and selected appearance |
-| `scripts/build-client.mjs` | Split browser bundles through esbuild |
-| `scripts/sync-site.sh` | Root-to-public synchronization and selected media |
+| `pages/about.html` | Native disclosure, static image, controls and film |
+| `style.css` | Layout, fallback composition and reduced motion |
+| `studio.ts` | Scene selection, explicit loading, status and disposal |
+| `ui.ts` | Shared navigation, theme, screenshots, explorers and film pausing |
+| `app.ts` | Contact intake only |
+| `scene/system.ts` | Renderer, camera, quality policy and lifecycle |
+| `scene/character.ts` | Existing procedural character factory |
+| `scene/workflow.ts` | Existing six illustrative modules |
+| `scripts/build-client.mjs` | Hashed entries with dynamically split Three.js |
+| `scripts/sync-site.sh` | Generated pages and allowlisted public media |
 
-`tsconfig.json` checks `app.ts`, `ui.ts` and `scene/**/*.ts` with strict mode, unchecked indexed access and unused symbol checks. The old `scene/story.js` and film renderer remain for recovery. The new HTML does not load the old story bundle.
+The nine service categories do not drive the six illustration states. Services loads a small scene controller; the Three.js/system bundle is fetched only after an explicit request. Home, services and contact do not load the illustration entry. Browser sources remain strict TypeScript.
 
 ## Scene contract
 
@@ -30,17 +31,15 @@ interface SystemScene {
 }
 ```
 
-Integer states are 0 ERP, 1 custom software, 2 AI and automation, 3 data, 4 integrations and 5 cloud. Invalid indexes raise `RangeError`. Selection slightly enlarges a module and brightens its accent and route. Corresponding explanations remain ordinary HTML owned by `ui.ts`.
+Integer states are 0 ERP, 1 custom software, 2 AI and automation, 3 data, 4 integrations and 5 cloud. Invalid indexes raise `RangeError`. Selection slightly enlarges a module and brightens its accent and route. The selection and status remain available through native HTML controls owned by `studio.ts`.
 
-The canvas emits bubbling `scene-ready` and `scene-error` events. `ui.ts` toggles the stage's `ready` class and exposes the fallback when necessary. Canvas content is decorative and hidden from assistive technology. Native controls retain focus.
+The canvas emits bubbling `scene-ready` and `scene-error` events. `studio.ts` toggles the stage's `ready` class and exposes the fallback when necessary. Canvas content is decorative and hidden from assistive technology. Native controls retain focus.
 
 ## Loading policy
 
 `media/system-poster.webp` occupies a reserved-size stage from first paint. Three.js sits behind a dynamic import and is excluded from the initial browser entry bundles.
 
-Intent triggers are the "Explore in 3D" button, a hero ERP/AI/Data choice, or pointer entry on an eligible desktop viewport of at least 900 px. Pointer entry is registered only when reduced motion and the available save-data hint are off. Capability choices below the hero update HTML without forcing a scene download; they also update an already loaded scene.
-
-Mobile, tablet, reduced-motion and save-data visitors start with the static view and may explicitly request 3D. Context creation failure keeps that image and provides a retry. No capability fingerprint or automatic benchmark download is used.
+Intent triggers are the explicit “Explore in 3D” button or one of the six illustration choices inside the native Services page disclosure. There is no automatic pointer-entry load. Mobile, reduced-motion and data-saving visitors may keep the static illustration or explicitly request the scene. Context creation failure keeps that image and provides a retry. No capability fingerprint or automatic benchmark download is used.
 
 ## Scheduling and quality
 
@@ -58,9 +57,9 @@ Character parts share sphere geometry and materials. Module panels share box geo
 
 Context loss prevents default teardown, cancels frames, hides the canvas and emits `scene-error`. Browser context restoration shows the canvas, reapplies size and camera settings, requests a frame and emits `scene-ready`; Three.js handles rebuilding underlying GPU resources. Browser verification is required before claiming this path works across devices.
 
-`dispose()` is idempotent. It cancels animation, disconnects both observers, removes pointer, visibility, media-query and context listeners, and disposes unique geometries and materials once using sets. It disposes the renderer and releases its context. `ui.ts` disposes on page exit except when the browser preserves the page in its back-forward cache.
+`dispose()` is idempotent. It cancels animation, disconnects both observers, removes pointer, visibility, media-query and context listeners, and disposes unique geometries and materials once using sets. It disposes the renderer and releases its context. `studio.ts` disposes on page exit except when the browser preserves the page in its back-forward cache.
 
-Static poster capture and final Safari canvas visibility are under visual QA. A file existing on disk does not establish that its WebGL content was captured correctly. See `QA_REPORT.md` for current results.
+The retained scene was rendered and paused in Chrome during this change. Safari, physical devices and injected context-loss browser checks were not rerun. See `QA_REPORT.md` for current evidence and limits.
 
 ## Technology decisions
 

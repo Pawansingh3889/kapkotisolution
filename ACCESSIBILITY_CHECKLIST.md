@@ -1,42 +1,32 @@
-# Accessibility checklist
+# Accessibility and SEO review
 
-Date: 2026-10-19. Status: requirements and baseline observations, not a WCAG certification. Target WCAG 2.2 AA where applicable.
+Updated 25 October 2026. This records completed checks and explicit limits; it is not a full WCAG conformance statement.
 
-## Existing strengths observed in source
+## Completed
 
-- Semantic HTML, one H1, skip link and section headings.
-- Labeled inquiry fields, live status output, explicit consent and a focusable success panel.
-- Native video controls, hidden decorative canvas and visible focus styling.
-- Reduced-motion CSS and initial motion preference checks.
+- [x] Semantic header, navigation, main, sections and footer with a skip link.
+- [x] One H1 and unique document metadata on every route.
+- [x] Native mobile navigation, keyboard focus styling, Escape closure and focus return.
+- [x] Native service disclosures and complete HTML content on Services; deep links reveal and scroll to collapsed content.
+- [x] Delivery/stack controls have pressed state, controlled IDs, keyboard arrow/Home/End behavior and exactly one selected panel when enhanced.
+- [x] All eight delivery and all eight architecture selections exercised in Chrome.
+- [x] Meaningful product/illustration alternatives; decorative diagram parts excluded where appropriate.
+- [x] Labelled contact fields, native required constraints, explicit unchecked consent and visible status/failure recovery.
+- [x] Direct brief before the person note on phones; optional assistant, separate privacy tab, no-JavaScript email fallback, contact details outside the model context.
+- [x] CSS reduced-motion policy and existing scene pause/reduced-motion/lifecycle behavior retained.
+- [x] Native film controls, no autoplay, preload disabled and adjacent text narrative.
+- [x] Thirteen pages inspected at 320, 390, 768, 1024 and 1440 CSS pixels without horizontal overflow.
+- [x] Local Lighthouse accessibility, best-practices and SEO scores of 100 on Home, Contact and Technology.
+- [x] Canonical URLs, social image/metadata, valid JSON-LD and a sitemap for all 12 indexable routes; custom 404 is noindex and served with HTTP 404 for unknown paths.
+- [x] Generated local links, fragments, media and duplicate IDs checked automatically.
+- [x] Light/dark themes checked, including fixed-palette diagram rendering after switching.
 
-## Redesign acceptance checklist
+## Not exercised or not established
 
-- [ ] Full keyboard journey: header, services, products, film, chat, manual brief, consent, confirmation and download.
-- [ ] Mobile menu usable without JavaScript; Escape/closing behavior does not trap focus.
-- [ ] Visible focus indicators, no focus hidden by sticky header, logical focus order.
-- [ ] All meaningful graphics have equivalent text; decorative graphics excluded from screen readers.
-- [ ] Every 3D selection has an equivalent native control and readable result outside the canvas.
-- [ ] No hover-only information, drag-only controls, custom cursor or scroll interception.
-- [ ] Reduced motion at load and preference change; pause stops all optional ambient motion.
-- [ ] Screen-reader check with VoiceOver or another real assistive technology, not only an accessibility tree.
-- [ ] Normal text contrast at least 4.5:1, large text at least 3:1; control/focus boundaries at least 3:1 where required.
-- [ ] Touch areas at least 44 px as design target; verify WCAG target-size/spacing requirements.
-- [ ] Layout at 320, 390, 768, 1024 and 1440 CSS px; 200% zoom and 400% reflow without lost content.
-- [ ] Portrait and landscape orientation, long text, browser font scaling and Hindi text.
-- [ ] Film has accessible name, controls, text narrative and captions for any meaningful speech/audio.
-- [ ] Form errors identify fields and preserve entered information; pending API does not disable unrelated controls.
-- [ ] Direct email and manual brief remain available when AI requests fail.
-- [ ] No-JS, no-WebGL and context-loss fallbacks preserve useful content and links. AI chat still needs JavaScript, so disclose this and show direct email.
-- [ ] Privacy/consent copy matches retained data processing; no new implicit submissions.
-- [ ] Automated accessibility scan plus manual review, with findings recorded in QA_REPORT.md.
+- [ ] Actual screen-reader journeys (VoiceOver or another assistive technology).
+- [ ] Actual 200/400-percent browser zoom and user font scaling.
+- [ ] Physical mobile devices, Safari and Firefox.
+- [ ] A forced reduced-motion browser session or hardware-specific WebGL failure.
+- [ ] Production field metrics, live enquiry delivery and real-domain post-release verification.
 
-## SEO acceptance checklist
-
-- [ ] Unique title, description, canonical, language and complete Open Graph image metadata.
-- [ ] Accurate Organization or ProfessionalService structured data, without invented reviews or statistics.
-- [ ] Sitemap and robots match actual public routes and preview policy.
-- [ ] All core copy and product links present in returned HTML.
-- [ ] Legacy anchors retained or mapped; outbound products checked read-only.
-- [ ] Social image and product screenshots contain no private/customer data.
-
-The discovery board is a non-indexed composition review, not the redesigned website. Its links only navigate the board.
+Viewport reflow checks do not substitute for actual browser zoom or assistive technology. Automated accessibility scores do not establish full compliance. See `QA_REPORT.md` for conditions, results and release limits.
