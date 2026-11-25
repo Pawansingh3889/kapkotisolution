@@ -806,3 +806,6 @@ input::placeholder,textarea::placeholder { color:var(--muted); opacity:1; }
 .service-panel,#technical-services { scroll-margin-top:0; }
 .service-panel-actions { display:flex; flex-wrap:wrap; align-items:center; gap:20px; }
 .service-panel-actions>.text-link { font-size:13px; }
+
+.subscribe-frame { display:block; width:100%; max-width:480px; height:64px; margin-top:30px; border:0; color-scheme:light; }
+.subscribe-frame + .caption { margin-top:12px; }
