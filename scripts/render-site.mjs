@@ -9,6 +9,7 @@ export const pages = [
   { path: '/technology/', source: 'pages/technology.html', title: 'Services | Kapkoti Solution', description: 'Browse nine AI services in three clear stages: plan and prepare, build and connect, deploy and improve. Definitions, business examples and technical detail in one place.' },
   { path: '/how-we-work/', source: 'pages/how-we-work.html', title: 'How It Works | Kapkoti Solution', description: 'Tell us what slows you down, try a small solution and decide what to build next. A clear way to get started with AI for your business.' },
   { path: '/about/', source: 'pages/about.html', title: 'About Our Engineering Approach | Kapkoti Solution', description: 'An independent AI engineering practice based in Kapkot, India. Learn how we build around existing business systems, practical constraints and accountable delivery.' },
+  { path: '/newsletter/', source: 'pages/newsletter.html', title: 'Down the Stack Newsletter | Kapkoti Solution', description: 'Down the Stack, a free newsletter by Pawan Singh Kapkoti: one everyday tech question followed down to the bits and the maths, in plain words.' },
   { path: '/contact/', source: 'pages/contact.html', title: 'Let’s Talk | Kapkoti Solution', description: 'Tell Pawan what you would like to make easier. A few lines about your business problem is enough to start, with optional help putting it into words.' },
   { path: '/privacy/', source: 'pages/privacy.html', title: 'Privacy & Enquiry Information | Kapkoti Solution', description: 'How Kapkoti Solution processes enquiries, optional AI conversations, contact details, submission emails and abuse-prevention records.' },
   ...projects.map((project) => ({ path: `/solutions/${project.id}/`, source: 'templates/solution.html', title: `${project.name}: Engineering Example | Kapkoti Solution`, description: project.description, project })),
@@ -67,8 +68,15 @@ const screenshots = `<section class="wrap section-tight"><div class="product-sho
 
 const technicalProjects = projects.map((project) => `<article class="technical-project" id="project-${project.id}"><p class="eyebrow">${e(project.status)}</p><h2>${e(project.name)}</h2><ol class="architecture-flow">${project.flow.map((step, index) => `<li><span class="index">${number(index)}</span><h3>${e(step)}</h3></li>`).join('')}</ol><p class="caption">Simplified architecture from inspected code. This does not verify the current deployed version.</p><div class="two-column technical-project-notes"><div><h3>Implemented in the project</h3><ul class="check-list">${list(project.implemented)}</ul></div><div><h3>Boundaries and current maturity</h3><p>${e(project.boundary)}</p><p>${e(project.maturity)}</p><h3 class="feature-heading">Future work</h3><p>${e(project.next)}</p></div></div><p class="caption">These examples do not establish a customer deployment or production readiness.</p><a class="text-link" href="/solutions/${project.id}/">See the business example <span aria-hidden="true">↗</span></a></article>`).join('');
 
+const issues = JSON.parse(await readFile('newsletter.json', 'utf8'));
+if (!Array.isArray(issues) || issues.length === 0) throw new Error('newsletter.json must list at least one issue; run pnpm sync:newsletter');
+const external = 'target="_blank" rel="noopener"';
+const newsletterIssues = `<div class="method-grid">${issues.map((issue) => `<article><span class="index">${number(issue.number - 1)}</span><h3><a href="${e(issue.url)}" ${external}>${e(issue.title)}</a></h3><p>${e(issue.summary)}</p><a class="text-link" href="${e(issue.url)}" ${external}>Read issue #${issue.number} <span aria-hidden="true">↗</span></a></article>`).join('')}</div>`;
+const latest = issues[0];
+const newsletterLatest = `<section class="wrap section" id="newsletter"><div class="section-heading"><p class="eyebrow">FROM THE NEWSLETTER / DOWN THE STACK #${latest.number}</p><div class="heading-row"><h2>${e(latest.title)}</h2><p>${e(latest.summary)}</p></div></div><div class="section-end"><a class="text-link" href="${e(latest.url)}" ${external}>Read the latest issue <span aria-hidden="true">↗</span></a><a class="text-link" href="/newsletter/">About Down the Stack <span aria-hidden="true">↗</span></a></div></section>`;
+
 const components = {
-  cta, simpleProcess, technicalProjects,
+  cta, simpleProcess, technicalProjects, newsletterIssues, newsletterLatest,
   businessCards: businessCards(), businessDetails: businessDetails(), serviceExplorer: serviceExplorer(), projectCards: projectCards(),
   processExplorer: processExplorer(), stackExplorer: stackExplorer(),
   industrySections: industries.map((industry, index) => `<article class="industry-section" id="${industry.id}"><div class="industry-heading"><span class="index">${number(index)}</span><p class="eyebrow">${e(industry.name)}</p><h2>${e(industry.title)}</h2><p>${e(industry.text)}</p><a class="text-link" href="/solutions/${industry.project}/">See a related example <span aria-hidden="true">↗</span></a></div><dl class="industry-context"><div><dt>Information you already have</dt><dd>${e(industry.data)}</dd></div><div><dt>How we could check the result</dt><dd>${e(industry.measure)}</dd></div><div><dt>Where we begin</dt><dd>One problem, a sample of your records and a clear idea of what better would look like.</dd></div></dl></article>`).join(''),
@@ -119,7 +127,7 @@ export async function renderPages(bundles) {
         pageScripts: `${page.path === '/contact/' ? `<script type="module" src="${bundles.app}"></script>` : ''}${page.path === '/technology/' ? `<script type="module" src="${bundles.studio}"></script>` : ''}`,
         robots: page.noindex ? '<meta name="robots" content="noindex, follow">' : '',
         schema: JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c'),
-        navigation: [['How We Help', '/services/'], ['Our Work', '/solutions/'], ['How It Works', '/how-we-work/'], ['About', '/about/'], ['Services', '/technology/']].map(([name, path]) => `<a href="${path}"${page.path === path ? ' aria-current="page"' : ''}>${name}</a>`).join(''),
+        navigation: [['How We Help', '/services/'], ['Our Work', '/solutions/'], ['How It Works', '/how-we-work/'], ['About', '/about/'], ['Services', '/technology/'], ['Newsletter', '/newsletter/']].map(([name, path]) => `<a href="${path}"${page.path === path ? ' aria-current="page"' : ''}>${name}</a>`).join(''),
       }),
     };
   }));

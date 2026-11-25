@@ -82,3 +82,17 @@ test('the service hierarchy includes every service once with a named, linked tab
 test('page rendering refuses incomplete browser bundles', async () => {
   await assert.rejects(renderPages({ ...bundles, app: undefined }), /Missing browser entry: app/);
 });
+
+test('newsletter feed parsing and issue rendering', async () => {
+  const { parseFeed } = await import('../scripts/sync-newsletter.mjs');
+  const item = (n, title) => `<item><title><![CDATA[Down the Stack #${n}: ${title}]]></title><description>Q &amp; A&#39;s</description><link>https://downthestack.beehiiv.com/p/issue-${n}</link><pubDate>Tue, 24 Nov 2026 06:35:28 +0000</pubDate></item>`;
+  const parsed = parseFeed(`<rss><channel>${item(1, 'One')}${item(2, 'Two')}</channel></rss>`);
+  assert.deepEqual(parsed.map((issue) => issue.number), [2, 1]);
+  assert.equal(parsed[0].summary, "Q & A's");
+  assert.throws(() => parseFeed('<rss></rss>'), /no issues/);
+  assert.throws(() => parseFeed(`<rss>${item(3, 'x').replace('Down the Stack #3: ', '')}</rss>`), /Unexpected issue title/);
+
+  const issues = JSON.parse(await readFile('newsletter.json', 'utf8'));
+  for (const issue of issues) assert.ok(byRoute.get('/newsletter/').includes(issue.url), issue.url);
+  assert.ok(byRoute.get('/').includes(issues[0].url), 'Homepage shows the latest issue');
+});
