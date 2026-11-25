@@ -11,5 +11,5 @@
     "noUnusedParameters": true,
     "noEmit": true
   },
-  "include": ["app.ts", "ui.ts", "scene/**/*.ts"]
+  "include": ["app.ts", "ui.ts", "studio.ts", "theme.ts", "scene/**/*.ts"]
 }

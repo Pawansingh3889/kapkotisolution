@@ -4,15 +4,16 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "lint": "eslint worker.js tests/*.test.js scripts/build-client.mjs",
+    "lint": "eslint worker.js content.mjs tests/*.test.js scripts/build-client.mjs scripts/render-site.mjs scripts/sync-newsletter.mjs scripts/render-social.mjs",
     "typecheck": "tsc --noEmit && tsc --ignoreConfig --noEmit --allowJs --checkJs --strict false --target es2022 --module esnext --lib es2023,dom,dom.iterable worker.js",
     "build:client": "node scripts/build-client.mjs",
     "build:site": "pnpm build:client && sh scripts/sync-site.sh",
     "build": "pnpm typecheck && pnpm build:site && wrangler deploy --dry-run --outdir dist",
-    "dev": "pnpm build:site && wrangler dev",
-    "deploy": "pnpm build && wrangler deploy",
+    "dev": "pnpm build:site && wrangler dev --compatibility-date 2026-09-22",
+    "deploy": "pnpm sync:newsletter && pnpm build && wrangler deploy",
     "video": "node scripts/render-video.mjs",
-    "build:story": "esbuild scene/story.js --bundle --minify --format=esm --target=es2022 --outfile=story.js"
+    "build:story": "esbuild scene/story.js --bundle --minify --format=esm --target=es2022 --outfile=story.js",
+    "sync:newsletter": "node scripts/sync-newsletter.mjs"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^1.0.9",

@@ -13,15 +13,8 @@ let submitted = false;
 let submission: { id: string; fingerprint: string } | null = null;
 let savedBrief = '';
 $('chat-card').hidden = false;
-$('year').textContent = String(new Date().getFullYear());
-
-// Menu: always open on wide screens (links sit inline there), closes after a tap on phones.
-const menu = element('menu', HTMLDetailsElement);
-const wide = matchMedia('(min-width: 900px)');
-const syncMenu = () => { menu.open = wide.matches; };
-wide.addEventListener('change', syncMenu);
-syncMenu();
-menu.addEventListener('click', (event) => { if (event.target instanceof Element && event.target.closest('a') && !wide.matches) menu.open = false; });
+$('chat-panel').hidden = true;
+$('brief-form').hidden = false;
 
 function setBusy(value: boolean, status = '') {
   busy = value;
