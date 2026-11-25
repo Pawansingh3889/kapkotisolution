@@ -9,6 +9,7 @@ export const pages = [
   { path: '/technology/', source: 'pages/technology.html', title: 'Services | Kapkoti Solution', description: 'Browse nine AI services in three clear stages: plan and prepare, build and connect, deploy and improve. Definitions, business examples and technical detail in one place.' },
   { path: '/how-we-work/', source: 'pages/how-we-work.html', title: 'How It Works | Kapkoti Solution', description: 'Tell us what slows you down, try a small solution and decide what to build next. A clear way to get started with AI for your business.' },
   { path: '/about/', source: 'pages/about.html', title: 'About Our Engineering Approach | Kapkoti Solution', description: 'An independent AI engineering practice based in Kapkot, India. Learn how we build around existing business systems, practical constraints and accountable delivery.' },
+  { path: '/newsletter/', source: 'pages/newsletter.html', title: 'Down the Stack Newsletter | Kapkoti Solution', description: 'Down the Stack, a free newsletter by Pawan Singh Kapkoti: one everyday tech question followed down to the bits and the maths, in plain words.' },
   { path: '/contact/', source: 'pages/contact.html', title: 'Let’s Talk | Kapkoti Solution', description: 'Tell Pawan what you would like to make easier. A few lines about your business problem is enough to start, with optional help putting it into words.' },
   { path: '/privacy/', source: 'pages/privacy.html', title: 'Privacy & Enquiry Information | Kapkoti Solution', description: 'How Kapkoti Solution processes enquiries, optional AI conversations, contact details, submission emails and abuse-prevention records.' },
   ...projects.map((project) => ({ path: `/solutions/${project.id}/`, source: 'templates/solution.html', title: `${project.name}: Engineering Example | Kapkoti Solution`, description: project.description, project })),
@@ -119,7 +120,7 @@ export async function renderPages(bundles) {
         pageScripts: `${page.path === '/contact/' ? `<script type="module" src="${bundles.app}"></script>` : ''}${page.path === '/technology/' ? `<script type="module" src="${bundles.studio}"></script>` : ''}`,
         robots: page.noindex ? '<meta name="robots" content="noindex, follow">' : '',
         schema: JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c'),
-        navigation: [['How We Help', '/services/'], ['Our Work', '/solutions/'], ['How It Works', '/how-we-work/'], ['About', '/about/'], ['Services', '/technology/']].map(([name, path]) => `<a href="${path}"${page.path === path ? ' aria-current="page"' : ''}>${name}</a>`).join(''),
+        navigation: [['How We Help', '/services/'], ['Our Work', '/solutions/'], ['How It Works', '/how-we-work/'], ['About', '/about/'], ['Services', '/technology/'], ['Newsletter', '/newsletter/']].map(([name, path]) => `<a href="${path}"${page.path === path ? ' aria-current="page"' : ''}>${name}</a>`).join(''),
       }),
     };
   }));
